@@ -1,0 +1,9 @@
+{
+    "name": "eth-flask-app",
+    "version": "1.0.0",
+    "dependencies": {
+      "web3": "^1.10.0",
+      "solc": "^0.8.0"
+    }
+}
+  

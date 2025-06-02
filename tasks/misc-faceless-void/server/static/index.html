@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faceless Void</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <style>
+        :root {
+            --bs-primary: #000000;
+            --bs-primary-rgb: 0, 0, 0;
+        }
+        body {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            min-height: 100vh;
+        }
+        .btn-primary {
+            --bs-btn-bg: #000000;
+            --bs-btn-border-color: #000000;
+            --bs-btn-hover-bg: #333333;
+            --bs-btn-hover-border-color: #333333;
+            --bs-btn-active-bg: #333333;
+            --bs-btn-active-border-color: #333333;
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .camera-container {
+            position: relative;
+            width: 640px;
+            height: 480px;
+            margin: 0 auto;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .loading-spinner {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+        }
+        .spinner-border {
+            color: #000000 !important;
+        }
+        .card {
+            border: none;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            border-radius: 12px;
+        }
+        .card-header {
+            background: linear-gradient(135deg, #000000 0%, #333333 100%);
+            border-bottom: none;
+            border-radius: 12px 12px 0 0 !important;
+            padding: 1.5rem;
+        }
+        .card-body {
+            padding: 2rem;
+        }
+        .alert {
+            border: none;
+            border-radius: 8px;
+        }
+        .alert-success {
+            background-color: #e8f5e9;
+            color: #1b5e20;
+        }
+        .alert-danger {
+            background-color: #ffebee;
+            color: #b71c1c;
+        }
+        .alert-warning {
+            background-color: #fff3e0;
+            color: #e65100;
+        }
+        .alert-info {
+            background-color: #e3f2fd;
+            color: #0d47a1;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="loading-spinner">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white">
+                        <h3 class="mb-0 text-center">Faceless Void Authentication</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="text-center mb-4">
+                            <p class="lead">Look at the camera to authenticate or register</p>
+                        </div>
+                        
+                        <div class="camera-container mb-3">
+                            <video id="video" autoplay muted playsinline></video>
+                            <canvas id="overlay"></canvas>
+                        </div>
+
+                        <div class="text-center">
+                            <button id="captureBtn" class="btn btn-primary btn-lg" disabled>
+                                Authenticate
+                            </button>
+                        </div>
+
+                        <div id="status" class="alert mt-3" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isModelLoaded = false;
+        let stream = null;
+
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = `alert alert-${type} mt-3`;
+            statusDiv.style.display = 'block';
+        }
+
+        function toggleLoading(show) {
+            document.querySelector('.loading-spinner').style.display = show ? 'block' : 'none';
+        }
+
+        async function initFaceDetection() {
+            try {
+                toggleLoading(true);
+                await faceapi.nets.tinyFaceDetector.loadFromUri('/models');
+                await faceapi.nets.faceLandmark68Net.loadFromUri('/models');
+                isModelLoaded = true;
+                toggleLoading(false);
+                showStatus('Face detection initialized. You can now authenticate.', 'success');
+                document.getElementById('captureBtn').disabled = false;
+            } catch (error) {
+                console.error('Error loading face detection models:', error);
+                showStatus('Failed to initialize face detection. Please refresh the page.', 'danger');
+                toggleLoading(false);
+            }
+        }
+
+        async function startVideo() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: {
+                        width: 640,
+                        height: 480
+                    }
+                });
+                const video = document.getElementById('video');
+                video.srcObject = stream;
+                
+                await new Promise((resolve) => {
+                    video.onloadedmetadata = () => {
+                        video.play();
+                        resolve();
+                    };
+                });
+            } catch (error) {
+                console.error('Error accessing webcam:', error);
+                showStatus('Unable to access webcam. Please make sure you have granted camera permissions.', 'danger');
+            }
+        }
+
+        async function detectFaces() {
+            if (!isModelLoaded) return;
+            
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('overlay');
+
+            if (video.videoWidth === 0 || video.videoHeight === 0) {
+                return false;
+            }
+
+            const displaySize = { width: video.videoWidth, height: video.videoHeight };
+            faceapi.matchDimensions(canvas, displaySize);
+
+            const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
+                .withFaceLandmarks();
+            const resizedDetections = faceapi.resizeResults(detections, displaySize);
+            
+            canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+            faceapi.draw.drawDetections(canvas, resizedDetections);
+            faceapi.draw.drawFaceLandmarks(canvas, resizedDetections);
+
+            return detections.length > 0;
+        }
+
+        function checkAuth() {
+            const token = localStorage.getItem('auth_token');
+            if (token) {
+                fetch('/api/users', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        window.location.href = '/users.html';
+                    } else {
+                        localStorage.removeItem('auth_token');
+                        localStorage.removeItem('user_id');
+                    }
+                })
+                .catch(() => {
+                    localStorage.removeItem('auth_token');
+                    localStorage.removeItem('user_id');
+                });
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            checkAuth();
+            
+            await startVideo();
+            await initFaceDetection();
+            
+            setInterval(detectFaces, 100);
+        });
+
+        document.getElementById('captureBtn').addEventListener('click', async () => {
+            const hasFace = await detectFaces();
+            if (hasFace) {
+                await captureAndSend();
+            } else {
+                showStatus('No face detected. Please position your face in front of the camera.', 'warning');
+            }
+        });
+
+        async function captureAndSend() {
+            const video = document.getElementById('video');
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+
+            try {
+                toggleLoading(true);
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg'));
+                const formData = new FormData();
+                formData.append('file', blob, 'face.jpg');
+
+                const response = await fetch('/api/auth', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    localStorage.setItem('auth_token', data.access_token);
+                    localStorage.setItem('user_id', data.user_id);
+                    
+                    window.location.href = '/users.html';
+                } else {
+                    showStatus(data.detail || 'Authentication failed', 'danger');
+                }
+            } catch (error) {
+                console.error('Error during authentication:', error);
+                showStatus('Authentication failed. Please try again.', 'danger');
+            } finally {
+                toggleLoading(false);
+            }
+        }
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 

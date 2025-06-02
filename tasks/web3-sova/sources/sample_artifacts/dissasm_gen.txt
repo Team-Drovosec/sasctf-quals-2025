@@ -1,0 +1,448 @@
+
+Function reversible_transform @ 0x000100b0, size=416
+0x000100b0:	addi     sp, sp, -0x60
+  REG: sp
+  REG: sp
+  IMM: -96
+0x000100b4:	sd       s0, 0x58(sp)
+  REG: s0
+  MEM:
+    base: sp
+    disp: 88
+0x000100b8:	addi     s0, sp, 0x60
+  REG: s0
+  REG: sp
+  IMM: 96
+0x000100bc:	sd       a0, -0x58(s0)
+  REG: a0
+  MEM:
+    base: s0
+    disp: -88
+0x000100c0:	sd       a1, -0x60(s0)
+  REG: a1
+  MEM:
+    base: s0
+    disp: -96
+0x000100c4:	lui      a5, 0xf00dc
+  REG: a5
+  IMM: 983260
+0x000100c8:	addi     a5, a5, -0x542
+  REG: a5
+  REG: a5
+  IMM: -1346
+0x000100cc:	sw       a5, -0x48(s0)
+  REG: a5
+  MEM:
+    base: s0
+    disp: -72
+0x000100d0:	lui      a5, 0xdeadc
+  REG: a5
+  IMM: 912092
+0x000100d4:	addi     a5, a5, -0x111
+  REG: a5
+  REG: a5
+  IMM: -273
+0x000100d8:	sw       a5, -0x44(s0)
+  REG: a5
+  MEM:
+    base: s0
+    disp: -68
+0x000100dc:	lui      a5, 0xbadc1
+  REG: a5
+  IMM: 765377
+0x000100e0:	addi     a5, a5, -2
+  REG: a5
+  REG: a5
+  IMM: -2
+0x000100e4:	sw       a5, -0x40(s0)
+  REG: a5
+  MEM:
+    base: s0
+    disp: -64
+0x000100e8:	lui      a5, 0xfeee0
+  REG: a5
+  IMM: 1044192
+0x000100ec:	addi     a5, a5, -0x532
+  REG: a5
+  REG: a5
+  IMM: -1330
+0x000100f0:	sw       a5, -0x3c(s0)
+  REG: a5
+  MEM:
+    base: s0
+    disp: -60
+0x000100f4:	sd       zero, -0x18(s0)
+  REG: zero
+  MEM:
+    base: s0
+    disp: -24
+0x000100f8:	ld       a4, -0x60(s0)
+  REG: a4
+  MEM:
+    base: s0
+    disp: -96
+0x000100fc:	addi     a5, zero, 8
+  REG: a5
+  REG: zero
+  IMM: 8
+0x00010100:	bgeu     a5, a4, 0xc
+  REG: a5
+  REG: a4
+  IMM: 2
+0x00010104:	addi     a5, zero, 8
+  REG: a5
+  REG: zero
+  IMM: 8
+0x00010108:	sd       a5, -0x60(s0)
+  REG: a5
+  MEM:
+    base: s0
+    disp: -96
+0x0001010c:	sd       zero, -0x20(s0)
+  REG: zero
+  MEM:
+    base: s0
+    disp: -32
+0x00010110:	j        0x44
+  IMM: 16
+0x00010114:	ld       a4, -0x58(s0)
+  REG: a4
+  MEM:
+    base: s0
+    disp: -88
+0x00010118:	ld       a5, -0x20(s0)
+  REG: a5
+  MEM:
+    base: s0
+    disp: -32
+0x0001011c:	add      a5, a4, a5
+  REG: a5
+  REG: a4
+  REG: a5
+0x00010120:	lbu      a5, 0(a5)
+  REG: a5
+  MEM:
+    base: a5
+    disp: 0
+0x00010124:	mv       a4, a5
+  REG: a4
+  REG: a5
+0x00010128:	ld       a5, -0x20(s0)
+  REG: a5
+  MEM:
+    base: s0
+    disp: -32
+0x0001012c:	sext.w   a5, a5
+  REG: a5
+  REG: a5
+0x00010130:	slliw    a5, a5, 3
+  REG: a5
+  REG: a5
+  IMM: 3
+0x00010134:	sext.w   a5, a5
+  REG: a5
+  REG: a5
+0x00010138:	sll      a5, a4, a5
+  REG: a5
+  REG: a4
+  REG: a5
+0x0001013c:	ld       a4, -0x18(s0)
+  REG: a4
+  MEM:
+    base: s0
+    disp: -24
+0x00010140:	or       a5, a4, a5
+  REG: a5
+  REG: a4
+  REG: a5
+0x00010144:	sd       a5, -0x18(s0)
+  REG: a5
+  MEM:
+    base: s0
+    disp: -24
+0x00010148:	ld       a5, -0x20(s0)
+  REG: a5
+  MEM:
+    base: s0
+    disp: -32
+0x0001014c:	addi     a5, a5, 1
+  REG: a5
+  REG: a5
+  IMM: 1
+0x00010150:	sd       a5, -0x20(s0)
+  REG: a5
+  MEM:
+    base: s0
+    disp: -32
+0x00010154:	ld       a4, -0x20(s0)
+  REG: a4
+  MEM:
+    base: s0
+    disp: -32
+0x00010158:	ld       a5, -0x60(s0)
+  REG: a5
+  MEM:
+    base: s0
+    disp: -96
+0x0001015c:	bltu     a4, a5, -0x48
+  REG: a4
+  REG: a5
+  IMM: -19
+0x00010160:	ld       a5, -0x18(s0)
+  REG: a5
+  MEM:
+    base: s0
+    disp: -24
+0x00010164:	srli     a5, a5, 0x20
+  REG: a5
+  REG: a5
+  IMM: 32
+0x00010168:	sw       a5, -0x24(s0)
+  REG: a5
+  MEM:
+    base: s0
+    disp: -36
+0x0001016c:	ld       a5, -0x18(s0)
+  REG: a5
+  MEM:
+    base: s0
+    disp: -24
+0x00010170:	sw       a5, -0x28(s0)
+  REG: a5
+  MEM:
+    base: s0
+    disp: -40
+0x00010174:	sw       zero, -0x2c(s0)
+  REG: zero
+  MEM:
+    base: s0
+    disp: -44
+0x00010178:	j        0xa8
+  IMM: 41
+0x0001017c:	lw       a5, -0x28(s0)
+  REG: a5
+  MEM:
+    base: s0
+    disp: -40
+0x00010180:	sw       a5, -0x30(s0)
+  REG: a5
+  MEM:
+    base: s0
+    disp: -48
+0x00010184:	lw       a5, -0x2c(s0)
+  REG: a5
+  MEM:
+    base: s0
+    disp: -44
+0x00010188:	slli     a5, a5, 2
+  REG: a5
+  REG: a5
+  IMM: 2
+0x0001018c:	addi     a5, a5, -0x10
+  REG: a5
+  REG: a5
+  IMM: -16
+0x00010190:	add      a5, a5, s0
+  REG: a5
+  REG: a5
+  REG: s0
+0x00010194:	lw       a5, -0x38(a5)
+  REG: a5
+  MEM:
+    base: a5
+    disp: -56
+0x00010198:	lw       a4, -0x28(s0)
+  REG: a4
+  MEM:
+    base: s0
+    disp: -40
+0x0001019c:	sw       a4, -0x34(s0)
+  REG: a4
+  MEM:
+    base: s0
+    disp: -52
+0x000101a0:	sw       a5, -0x38(s0)
+  REG: a5
+  MEM:
+    base: s0
+    disp: -56
+0x000101a4:	lw       a5, -0x34(s0)
+  REG: a5
+  MEM:
+    base: s0
+    disp: -52
+0x000101a8:	mv       a4, a5
+  REG: a4
+  REG: a5
+0x000101ac:	lw       a5, -0x38(s0)
+  REG: a5
+  MEM:
+    base: s0
+    disp: -56
+0x000101b0:	xor      a5, a4, a5
+  REG: a5
+  REG: a4
+  REG: a5
+0x000101b4:	sw       a5, -0x34(s0)
+  REG: a5
+  MEM:
+    base: s0
+    disp: -52
+0x000101b8:	lw       a5, -0x34(s0)
+  REG: a5
+  MEM:
+    base: s0
+    disp: -52
+0x000101bc:	slliw    a4, a5, 5
+  REG: a4
+  REG: a5
+  IMM: 5
+0x000101c0:	srliw    a5, a5, 0x1b
+  REG: a5
+  REG: a5
+  IMM: 27
+0x000101c4:	or       a5, a4, a5
+  REG: a5
+  REG: a4
+  REG: a5
+0x000101c8:	sext.w   a4, a5
+  REG: a4
+  REG: a5
+0x000101cc:	lui      a5, 0x45da
+  REG: a5
+  IMM: 17882
+0x000101d0:	addiw    a5, a5, -0xc5
+  REG: a5
+  REG: a5
+  IMM: -197
+0x000101d4:	mulw     a5, a4, a5
+  REG: a5
+  REG: a4
+  REG: a5
+0x000101d8:	sw       a5, -0x34(s0)
+  REG: a5
+  MEM:
+    base: s0
+    disp: -52
+0x000101dc:	lw       a5, -0x34(s0)
+  REG: a5
+  MEM:
+    base: s0
+    disp: -52
+0x000101e0:	srliw    a5, a5, 0x10
+  REG: a5
+  REG: a5
+  IMM: 16
+0x000101e4:	sext.w   a5, a5
+  REG: a5
+  REG: a5
+0x000101e8:	lw       a4, -0x34(s0)
+  REG: a4
+  MEM:
+    base: s0
+    disp: -52
+0x000101ec:	xor      a5, a4, a5
+  REG: a5
+  REG: a4
+  REG: a5
+0x000101f0:	sw       a5, -0x34(s0)
+  REG: a5
+  MEM:
+    base: s0
+    disp: -52
+0x000101f4:	lw       a5, -0x34(s0)
+  REG: a5
+  MEM:
+    base: s0
+    disp: -52
+0x000101f8:	sext.w   a5, a5
+  REG: a5
+  REG: a5
+0x000101fc:	sext.w   a5, a5
+  REG: a5
+  REG: a5
+0x00010200:	lw       a4, -0x24(s0)
+  REG: a4
+  MEM:
+    base: s0
+    disp: -36
+0x00010204:	xor      a5, a4, a5
+  REG: a5
+  REG: a4
+  REG: a5
+0x00010208:	sw       a5, -0x28(s0)
+  REG: a5
+  MEM:
+    base: s0
+    disp: -40
+0x0001020c:	lw       a5, -0x30(s0)
+  REG: a5
+  MEM:
+    base: s0
+    disp: -48
+0x00010210:	sw       a5, -0x24(s0)
+  REG: a5
+  MEM:
+    base: s0
+    disp: -36
+0x00010214:	lw       a5, -0x2c(s0)
+  REG: a5
+  MEM:
+    base: s0
+    disp: -44
+0x00010218:	addiw    a5, a5, 1
+  REG: a5
+  REG: a5
+  IMM: 1
+0x0001021c:	sw       a5, -0x2c(s0)
+  REG: a5
+  MEM:
+    base: s0
+    disp: -44
+0x00010220:	lw       a5, -0x2c(s0)
+  REG: a5
+  MEM:
+    base: s0
+    disp: -44
+0x00010224:	sext.w   a4, a5
+  REG: a4
+  REG: a5
+0x00010228:	addi     a5, zero, 3
+  REG: a5
+  REG: zero
+  IMM: 3
+0x0001022c:	bge      a5, a4, -0xb0
+  REG: a5
+  REG: a4
+  IMM: -45
+0x00010230:	lwu      a5, -0x24(s0)
+  REG: a5
+  MEM:
+    base: s0
+    disp: -36
+0x00010234:	slli     a4, a5, 0x20
+  REG: a4
+  REG: a5
+  IMM: 32
+0x00010238:	lwu      a5, -0x28(s0)
+  REG: a5
+  MEM:
+    base: s0
+    disp: -40
+0x0001023c:	or       a5, a4, a5
+  REG: a5
+  REG: a4
+  REG: a5
+0x00010240:	mv       a0, a5
+  REG: a0
+  REG: a5
+0x00010244:	ld       s0, 0x58(sp)
+  REG: s0
+  MEM:
+    base: sp
+    disp: 88
+0x00010248:	addi     sp, sp, 0x60
+  REG: sp
+  REG: sp
+  IMM: 96
+0x0001024c:	ret      

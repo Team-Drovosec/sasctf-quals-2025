@@ -1,0 +1,86 @@
+diff --git a/core/kernel/otp_stubs.c b/core/kernel/otp_stubs.c
+index e570b1a..056e1ac 100644
+--- a/core/kernel/otp_stubs.c
++++ b/core/kernel/otp_stubs.c
+@@ -19,7 +19,22 @@
+ 
+ __weak TEE_Result tee_otp_get_hw_unique_key(struct tee_hw_unique_key *hwkey)
+ {
+-	memset(&hwkey->data[0], 0, sizeof(hwkey->data));
++#ifdef STAGING_BUILD
++	const uint8_t hw_unique_key[sizeof(hwkey->data)] = {
++		0x4A, 0xE8, 0xBB, 0xB1, 0xEC, 0x2D, 0x5C, 0x4E,
++		0x97, 0x09, 0xBC, 0xCA, 0x5D, 0xCB, 0x11, 0xEC
++	};
++#elif PARTICIPANTS_BUILD
++	const uint8_t hw_unique_key[sizeof(hwkey->data)] = {
++		0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
++		0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F
++	};
++#else
++#error "No build type defined"
++#endif
++
++	memcpy(hwkey->data, hw_unique_key, sizeof(hwkey->data));
++
+ 	return TEE_SUCCESS;
+ }
+ 
+diff --git a/keys/custom_ta.pem b/keys/custom_ta.pem
+new file mode 100644
+index 0000000..57c1f58
+--- /dev/null
++++ b/keys/custom_ta.pem
+@@ -0,0 +1,52 @@
++-----BEGIN PRIVATE KEY-----
++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
++bIoPxaQGrpGnvT/8obThbzBVYx/Y
++-----END PRIVATE KEY-----

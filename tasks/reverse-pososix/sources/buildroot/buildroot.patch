@@ -1,0 +1,3188 @@
+diff --git a/.gitignore b/.gitignore
+index bb02d9f572..fb3d9f27dc 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -13,3 +13,4 @@
+ *.rej
+ *~
+ *.pyc
++
+diff --git a/Makefile b/Makefile
+index 3e85d5ef09..1984573ea4 100644
+--- a/Makefile
++++ b/Makefile
+@@ -275,27 +275,27 @@ CONFIG_SHELL := $(SHELL)
+ export SHELL CONFIG_SHELL Q KBUILD_VERBOSE
+ 
+ ifndef HOSTAR
+-HOSTAR := ar
++HOSTAR := gcc-ar-14
+ endif
+ ifndef HOSTAS
+ HOSTAS := as
+ endif
+ ifndef HOSTCC
+-HOSTCC := gcc
++HOSTCC := gcc-14
+ HOSTCC := $(shell which $(HOSTCC) || type -p $(HOSTCC) || echo gcc)
+ endif
+ ifndef HOSTCC_NOCCACHE
+ HOSTCC_NOCCACHE := $(HOSTCC)
+ endif
+ ifndef HOSTCXX
+-HOSTCXX := g++
++HOSTCXX := g++-14
+ HOSTCXX := $(shell which $(HOSTCXX) || type -p $(HOSTCXX) || echo g++)
+ endif
+ ifndef HOSTCXX_NOCCACHE
+ HOSTCXX_NOCCACHE := $(HOSTCXX)
+ endif
+ ifndef HOSTCPP
+-HOSTCPP := cpp
++HOSTCPP := cpp-14
+ endif
+ ifndef HOSTLD
+ HOSTLD := ld
+@@ -304,13 +304,13 @@ ifndef HOSTLN
+ HOSTLN := ln
+ endif
+ ifndef HOSTNM
+-HOSTNM := nm
++HOSTNM := gcc-nm-14
+ endif
+ ifndef HOSTOBJCOPY
+ HOSTOBJCOPY := objcopy
+ endif
+ ifndef HOSTRANLIB
+-HOSTRANLIB := ranlib
++HOSTRANLIB := gcc-ranlib-14
+ endif
+ HOSTAR := $(shell which $(HOSTAR) || type -p $(HOSTAR) || echo ar)
+ HOSTAS := $(shell which $(HOSTAS) || type -p $(HOSTAS) || echo as)
+diff --git a/board/qemu/riscv32-virt/nommu/patches/linux/6.8-rc1/0003-custom-syscalls.patch b/board/qemu/riscv32-virt/nommu/patches/linux/6.8-rc1/0003-custom-syscalls.patch
+new file mode 100644
+index 0000000000..a8acd4a986
+--- /dev/null
++++ b/board/qemu/riscv32-virt/nommu/patches/linux/6.8-rc1/0003-custom-syscalls.patch
+@@ -0,0 +1,87 @@
++diff --git a/customsyscalls/Kconfig b/customsyscalls/Kconfig
++new file mode 100644
++index 000000000..0ad3daf7f
++--- /dev/null
+++++ b/customsyscalls/Kconfig
++@@ -0,0 +1,11 @@
+++# SPDX-License-Identifier: GPL-2.0-only
+++
+++menu "Custom syscalls"
+++
+++config CUSTOM_SYSCALLS
+++    bool "Support for custom system calls"
+++    default n
+++    help
+++        This option allows you to enable custom system calls
+++
+++endmenu
++diff --git a/customsyscalls/Makefile b/customsyscalls/Makefile
++new file mode 100644
++index 000000000..8b2766b4f
++--- /dev/null
+++++ b/customsyscalls/Makefile
++@@ -0,0 +1 @@
+++obj-y := customsyscalls.o
++diff --git a/customsyscalls/customsyscalls.c b/customsyscalls/customsyscalls.c
++new file mode 100644
++index 000000000..91c143da4
++--- /dev/null
+++++ b/customsyscalls/customsyscalls.c
++@@ -0,0 +1,26 @@
+++#include <linux/kernel.h>
+++#include <linux/syscalls.h>
+++
+++const unsigned char XOR_KEY[8] = {0x2a, 0x99, 0x6e, 0xb0, 0x2c, 0x37, 0x2e, 0x8b};
+++const unsigned char encrypted[8] = {0x4f, 0xf4, 0x1b, 0xdc, 0x4d, 0x43, 0x41, 0xf9};
+++
+++static inline void decrypt(unsigned char *enc, unsigned char *data, unsigned long size) {
+++    for (unsigned long i = 0; i < size; ++i) {
+++        data[i] = enc[i] ^ XOR_KEY[i];
+++    }
+++}
+++
+++SYSCALL_DEFINE2(suscall, unsigned char __user *, data, unsigned long, size)
+++{   
+++    if (size != 8) { 
+++        return -EINVAL;
+++    }
+++
+++    unsigned char out[8 + 1] = {0};
+++    decrypt(encrypted, out, 8);
+++    printk("SUSCALL");
+++
+++    // printk("suscall");
+++    // printk(out);
+++    return copy_to_user(data, out, size);
+++}
++diff --git a/include/linux/syscalls.h b/include/linux/syscalls.h
++index 77eb9b0e7..af2c85f78 100644
++--- a/include/linux/syscalls.h
+++++ b/include/linux/syscalls.h
++@@ -1177,6 +1177,9 @@ asmlinkage long sys_mmap_pgoff(unsigned long addr, unsigned long len,
++ 			unsigned long fd, unsigned long pgoff);
++ asmlinkage long sys_old_mmap(struct mmap_arg_struct __user *arg);
++ 
+++asmlinkage long sys_suscall(
+++	unsigned char __user *out, 
+++	unsigned long size);
++ 
++ /*
++  * Not a real system call, but a placeholder for syscalls which are
++diff --git a/include/uapi/asm-generic/unistd.h b/include/uapi/asm-generic/unistd.h
++index 75f00965a..6a89bb0eb 100644
++--- a/include/uapi/asm-generic/unistd.h
+++++ b/include/uapi/asm-generic/unistd.h
++@@ -842,8 +842,11 @@ __SYSCALL(__NR_lsm_set_self_attr, sys_lsm_set_self_attr)
++ #define __NR_lsm_list_modules 461
++ __SYSCALL(__NR_lsm_list_modules, sys_lsm_list_modules)
++ 
+++#define __NR_suscall 462
+++__SYSCALL(__NR_suscall, sys_suscall)
+++
++ #undef __NR_syscalls
++-#define __NR_syscalls 462
+++#define __NR_syscalls 463
++ 
++ /*
++  * 32 bit systems traditionally used different
+diff --git a/board/qemu/riscv32-virt/users.txt b/board/qemu/riscv32-virt/users.txt
+new file mode 100644
+index 0000000000..9c9ddf838e
+--- /dev/null
++++ b/board/qemu/riscv32-virt/users.txt
+@@ -0,0 +1,2 @@
++ctf -2 ctf -2 =12345 /home/ctf /bin/sh users kek
++sas 1337 sas 1337 != /home/sas /bin/false wheel kek2
+diff --git a/busybox_config b/busybox_config
+new file mode 100644
+index 0000000000..8dc221527f
+--- /dev/null
++++ b/busybox_config
+@@ -0,0 +1,1215 @@
++#
++# Automatically generated make config: don't edit
++# Busybox version: 1.36.1
++# Tue Nov 28 19:25:11 2023
++#
++CONFIG_HAVE_DOT_CONFIG=y
++
++#
++# Settings
++#
++# CONFIG_DESKTOP is not set
++# CONFIG_EXTRA_COMPAT is not set
++# CONFIG_FEDORA_COMPAT is not set
++# CONFIG_INCLUDE_SUSv2 is not set
++CONFIG_LONG_OPTS=y
++# CONFIG_SHOW_USAGE is not set
++# CONFIG_FEATURE_VERBOSE_USAGE is not set
++# CONFIG_FEATURE_COMPRESS_USAGE is not set
++CONFIG_LFS=y
++CONFIG_PAM=y
++CONFIG_FEATURE_DEVPTS=y
++CONFIG_FEATURE_UTMP=y
++CONFIG_FEATURE_WTMP=y
++# CONFIG_FEATURE_PIDFILE is not set
++CONFIG_PID_FILE_PATH=""
++CONFIG_BUSYBOX=y
++CONFIG_FEATURE_SHOW_SCRIPT=y
++CONFIG_FEATURE_INSTALLER=y
++# CONFIG_INSTALL_NO_USR is not set
++CONFIG_FEATURE_SUID=y
++# CONFIG_FEATURE_SUID_CONFIG is not set
++# CONFIG_FEATURE_SUID_CONFIG_QUIET is not set
++# CONFIG_FEATURE_PREFER_APPLETS is not set
++CONFIG_BUSYBOX_EXEC_PATH="/proc/self/exe"
++# CONFIG_SELINUX is not set
++# CONFIG_FEATURE_CLEAN_UP is not set
++CONFIG_FEATURE_SYSLOG_INFO=y
++CONFIG_FEATURE_SYSLOG=y
++
++#
++# Build Options
++#
++CONFIG_STATIC=y
++# CONFIG_PIE is not set
++CONFIG_NOMMU=y
++# CONFIG_BUILD_LIBBUSYBOX is not set
++# CONFIG_FEATURE_LIBBUSYBOX_STATIC is not set
++# CONFIG_FEATURE_INDIVIDUAL is not set
++# CONFIG_FEATURE_SHARED_BUSYBOX is not set
++CONFIG_CROSS_COMPILER_PREFIX=""
++CONFIG_SYSROOT=""
++CONFIG_EXTRA_CFLAGS="-flto -Os -fdata-sections -ffunction-sections -finline-small-functions"
++CONFIG_EXTRA_LDFLAGS="-flto -s -Wl,--gc-sections"
++CONFIG_EXTRA_LDLIBS=""
++# CONFIG_USE_PORTABLE_CODE is not set
++CONFIG_STACK_OPTIMIZATION_386=y
++CONFIG_STATIC_LIBGCC=y
++
++#
++# Installation Options ("make install" behavior)
++#
++CONFIG_INSTALL_APPLET_SYMLINKS=y
++# CONFIG_INSTALL_APPLET_HARDLINKS is not set
++# CONFIG_INSTALL_APPLET_SCRIPT_WRAPPERS is not set
++# CONFIG_INSTALL_APPLET_DONT is not set
++# CONFIG_INSTALL_SH_APPLET_SYMLINK is not set
++# CONFIG_INSTALL_SH_APPLET_HARDLINK is not set
++# CONFIG_INSTALL_SH_APPLET_SCRIPT_WRAPPER is not set
++CONFIG_PREFIX="./_install"
++
++#
++# Debugging Options
++#
++# CONFIG_DEBUG is not set
++# CONFIG_DEBUG_PESSIMIZE is not set
++# CONFIG_DEBUG_SANITIZE is not set
++# CONFIG_UNIT_TEST is not set
++# CONFIG_WERROR is not set
++# CONFIG_WARN_SIMPLE_MSG is not set
++CONFIG_NO_DEBUG_LIB=y
++# CONFIG_DMALLOC is not set
++# CONFIG_EFENCE is not set
++
++#
++# Library Tuning
++#
++# CONFIG_FEATURE_USE_BSS_TAIL is not set
++CONFIG_FLOAT_DURATION=y
++CONFIG_FEATURE_RTMINMAX=y
++CONFIG_FEATURE_RTMINMAX_USE_LIBC_DEFINITIONS=y
++CONFIG_FEATURE_BUFFERS_USE_MALLOC=y
++# CONFIG_FEATURE_BUFFERS_GO_ON_STACK is not set
++# CONFIG_FEATURE_BUFFERS_GO_IN_BSS is not set
++CONFIG_PASSWORD_MINLEN=6
++CONFIG_MD5_SMALL=1
++CONFIG_SHA1_SMALL=3
++# CONFIG_SHA1_HWACCEL is not set
++# CONFIG_SHA256_HWACCEL is not set
++CONFIG_SHA3_SMALL=1
++CONFIG_FEATURE_NON_POSIX_CP=y
++# CONFIG_FEATURE_VERBOSE_CP_MESSAGE is not set
++CONFIG_FEATURE_USE_SENDFILE=y
++CONFIG_FEATURE_COPYBUF_KB=4
++CONFIG_MONOTONIC_SYSCALL=y
++CONFIG_IOCTL_HEX2STR_ERROR=y
++CONFIG_FEATURE_EDITING=y
++CONFIG_FEATURE_EDITING_MAX_LEN=1024
++CONFIG_FEATURE_EDITING_VI=y
++CONFIG_FEATURE_EDITING_HISTORY=999
++CONFIG_FEATURE_EDITING_SAVEHISTORY=y
++# CONFIG_FEATURE_EDITING_SAVE_ON_EXIT is not set
++CONFIG_FEATURE_REVERSE_SEARCH=y
++CONFIG_FEATURE_TAB_COMPLETION=y
++# CONFIG_FEATURE_USERNAME_COMPLETION is not set
++CONFIG_FEATURE_EDITING_FANCY_PROMPT=y
++CONFIG_FEATURE_EDITING_WINCH=y
++# CONFIG_FEATURE_EDITING_ASK_TERMINAL is not set
++# CONFIG_LOCALE_SUPPORT is not set
++# CONFIG_UNICODE_SUPPORT is not set
++# CONFIG_UNICODE_USING_LOCALE is not set
++# CONFIG_FEATURE_CHECK_UNICODE_IN_ENV is not set
++CONFIG_SUBST_WCHAR=0
++CONFIG_LAST_SUPPORTED_WCHAR=0
++# CONFIG_UNICODE_COMBINING_WCHARS is not set
++# CONFIG_UNICODE_WIDE_WCHARS is not set
++# CONFIG_UNICODE_BIDI_SUPPORT is not set
++# CONFIG_UNICODE_NEUTRAL_TABLE is not set
++# CONFIG_UNICODE_PRESERVE_BROKEN is not set
++# CONFIG_LOOP_CONFIGURE is not set
++# CONFIG_NO_LOOP_CONFIGURE is not set
++CONFIG_TRY_LOOP_CONFIGURE=y
++
++#
++# Applets
++#
++
++#
++# Archival Utilities
++#
++# CONFIG_FEATURE_SEAMLESS_XZ is not set
++# CONFIG_FEATURE_SEAMLESS_LZMA is not set
++# CONFIG_FEATURE_SEAMLESS_BZ2 is not set
++# CONFIG_FEATURE_SEAMLESS_GZ is not set
++# CONFIG_FEATURE_SEAMLESS_Z is not set
++# CONFIG_AR is not set
++# CONFIG_FEATURE_AR_LONG_FILENAMES is not set
++# CONFIG_FEATURE_AR_CREATE is not set
++# CONFIG_UNCOMPRESS is not set
++# CONFIG_GUNZIP is not set
++CONFIG_ZCAT=y
++# CONFIG_FEATURE_GUNZIP_LONG_OPTIONS is not set
++# CONFIG_BUNZIP2 is not set
++# CONFIG_BZCAT is not set
++# CONFIG_UNLZMA is not set
++# CONFIG_LZCAT is not set
++# CONFIG_LZMA is not set
++# CONFIG_UNXZ is not set
++# CONFIG_XZCAT is not set
++# CONFIG_XZ is not set
++# CONFIG_BZIP2 is not set
++CONFIG_BZIP2_SMALL=0
++# CONFIG_FEATURE_BZIP2_DECOMPRESS is not set
++# CONFIG_CPIO is not set
++# CONFIG_FEATURE_CPIO_O is not set
++# CONFIG_FEATURE_CPIO_P is not set
++# CONFIG_FEATURE_CPIO_IGNORE_DEVNO is not set
++# CONFIG_FEATURE_CPIO_RENUMBER_INODES is not set
++# CONFIG_DPKG is not set
++# CONFIG_DPKG_DEB is not set
++# CONFIG_GZIP is not set
++# CONFIG_FEATURE_GZIP_LONG_OPTIONS is not set
++CONFIG_GZIP_FAST=0
++# CONFIG_FEATURE_GZIP_LEVELS is not set
++CONFIG_FEATURE_GZIP_DECOMPRESS=y
++# CONFIG_LZOP is not set
++# CONFIG_UNLZOP is not set
++# CONFIG_LZOPCAT is not set
++# CONFIG_LZOP_COMPR_HIGH is not set
++# CONFIG_RPM is not set
++# CONFIG_RPM2CPIO is not set
++# CONFIG_TAR is not set
++# CONFIG_FEATURE_TAR_LONG_OPTIONS is not set
++# CONFIG_FEATURE_TAR_CREATE is not set
++# CONFIG_FEATURE_TAR_AUTODETECT is not set
++# CONFIG_FEATURE_TAR_FROM is not set
++# CONFIG_FEATURE_TAR_OLDGNU_COMPATIBILITY is not set
++# CONFIG_FEATURE_TAR_OLDSUN_COMPATIBILITY is not set
++# CONFIG_FEATURE_TAR_GNU_EXTENSIONS is not set
++# CONFIG_FEATURE_TAR_TO_COMMAND is not set
++# CONFIG_FEATURE_TAR_UNAME_GNAME is not set
++# CONFIG_FEATURE_TAR_NOPRESERVE_TIME is not set
++# CONFIG_FEATURE_TAR_SELINUX is not set
++CONFIG_UNZIP=y
++CONFIG_FEATURE_UNZIP_CDF=y
++# CONFIG_FEATURE_UNZIP_BZIP2 is not set
++# CONFIG_FEATURE_UNZIP_LZMA is not set
++# CONFIG_FEATURE_UNZIP_XZ is not set
++# CONFIG_FEATURE_LZMA_FAST is not set
++
++#
++# Coreutils
++#
++CONFIG_FEATURE_VERBOSE=y
++
++#
++# Common options for date and touch
++#
++# CONFIG_FEATURE_TIMEZONE is not set
++
++#
++# Common options for cp and mv
++#
++CONFIG_FEATURE_PRESERVE_HARDLINKS=y
++
++#
++# Common options for df, du, ls
++#
++CONFIG_FEATURE_HUMAN_READABLE=y
++CONFIG_BASENAME=y
++CONFIG_CAT=y
++CONFIG_FEATURE_CATN=y
++CONFIG_FEATURE_CATV=y
++CONFIG_CHGRP=y
++CONFIG_CHMOD=y
++CONFIG_CHOWN=y
++# CONFIG_FEATURE_CHOWN_LONG_OPTIONS is not set
++CONFIG_CHROOT=y
++CONFIG_CKSUM=y
++CONFIG_CRC32=y
++# CONFIG_COMM is not set
++CONFIG_CP=y
++# CONFIG_FEATURE_CP_LONG_OPTIONS is not set
++# CONFIG_FEATURE_CP_REFLINK is not set
++CONFIG_CUT=y
++CONFIG_FEATURE_CUT_REGEX=y
++CONFIG_DATE=y
++CONFIG_FEATURE_DATE_ISOFMT=y
++# CONFIG_FEATURE_DATE_NANO is not set
++CONFIG_FEATURE_DATE_COMPAT=y
++# CONFIG_DD is not set
++# CONFIG_FEATURE_DD_SIGNAL_HANDLING=y
++# CONFIG_FEATURE_DD_THIRD_STATUS_LINE is not set
++# CONFIG_FEATURE_DD_IBS_OBS=y
++# CONFIG_FEATURE_DD_STATUS=y
++CONFIG_DF=y
++# CONFIG_FEATURE_DF_FANCY is not set
++CONFIG_FEATURE_SKIP_ROOTFS=y
++CONFIG_DIRNAME=y
++# CONFIG_DOS2UNIX is not set
++# CONFIG_UNIX2DOS is not set
++CONFIG_DU=y
++CONFIG_FEATURE_DU_DEFAULT_BLOCKSIZE_1K=y
++CONFIG_ECHO=y
++CONFIG_FEATURE_FANCY_ECHO=y
++CONFIG_ENV=y
++# CONFIG_EXPAND is not set
++# CONFIG_UNEXPAND is not set
++CONFIG_EXPR=y
++CONFIG_EXPR_MATH_SUPPORT_64=y
++CONFIG_FACTOR=y
++CONFIG_FALSE=y
++# CONFIG_FOLD is not set
++CONFIG_HEAD=y
++CONFIG_FEATURE_FANCY_HEAD=y
++CONFIG_HOSTID=y
++CONFIG_ID=y
++CONFIG_GROUPS=y
++CONFIG_INSTALL=y
++# CONFIG_FEATURE_INSTALL_LONG_OPTIONS is not set
++CONFIG_LINK=y
++CONFIG_LN=y
++# CONFIG_LOGNAME is not set
++CONFIG_LS=y
++CONFIG_FEATURE_LS_FILETYPES=y
++CONFIG_FEATURE_LS_FOLLOWLINKS=y
++CONFIG_FEATURE_LS_RECURSIVE=y
++CONFIG_FEATURE_LS_WIDTH=y
++CONFIG_FEATURE_LS_SORTFILES=y
++CONFIG_FEATURE_LS_TIMESTAMPS=y
++CONFIG_FEATURE_LS_USERNAME=y
++CONFIG_FEATURE_LS_COLOR=y
++CONFIG_FEATURE_LS_COLOR_IS_DEFAULT=y
++CONFIG_MD5SUM=y
++CONFIG_SHA1SUM=y
++# CONFIG_SHA256SUM is not set
++# CONFIG_SHA512SUM is not set
++# CONFIG_SHA3SUM is not set
++
++#
++# Common options for md5sum, sha1sum, sha256sum, sha512sum, sha3sum
++#
++# CONFIG_FEATURE_MD5_SHA1_SUM_CHECK is not set
++CONFIG_MKDIR=y
++CONFIG_MKFIFO=y
++CONFIG_MKNOD=y
++# CONFIG_MKTEMP is not set
++CONFIG_MV=y
++CONFIG_NICE=y
++# CONFIG_NL is not set
++CONFIG_NOHUP=y
++CONFIG_NPROC=y
++CONFIG_OD=y
++CONFIG_PASTE=y
++CONFIG_PRINTENV=y
++# CONFIG_PRINTF is not set
++CONFIG_PWD=y
++CONFIG_READLINK=y
++CONFIG_FEATURE_READLINK_FOLLOW=y
++CONFIG_REALPATH=y
++CONFIG_RM=y
++CONFIG_RMDIR=y
++CONFIG_SEQ=y
++# CONFIG_SHRED is not set
++# CONFIG_SHUF is not set
++CONFIG_SLEEP=y
++CONFIG_FEATURE_FANCY_SLEEP=y
++CONFIG_SORT=y
++# CONFIG_FEATURE_SORT_BIG is not set
++# CONFIG_FEATURE_SORT_OPTIMIZE_MEMORY is not set
++# CONFIG_SPLIT is not set
++# CONFIG_FEATURE_SPLIT_FANCY is not set
++# CONFIG_STAT is not set
++# CONFIG_FEATURE_STAT_FORMAT is not set
++# CONFIG_FEATURE_STAT_FILESYSTEM is not set
++# CONFIG_STTY is not set
++# CONFIG_SUM is not set
++CONFIG_SYNC=y
++# CONFIG_FEATURE_SYNC_FANCY is not set
++# CONFIG_FSYNC is not set
++# CONFIG_TAC is not set
++CONFIG_TAIL=y
++CONFIG_FEATURE_FANCY_TAIL=y
++CONFIG_TEE=y
++CONFIG_FEATURE_TEE_USE_BLOCK_IO=y
++CONFIG_TEST=y
++CONFIG_TEST1=y
++CONFIG_TEST2=y
++CONFIG_FEATURE_TEST_64=y
++# CONFIG_TIMEOUT is not set
++CONFIG_TOUCH=y
++# CONFIG_FEATURE_TOUCH_SUSV3 is not set
++# CONFIG_TR is not set
++# CONFIG_FEATURE_TR_CLASSES is not set
++# CONFIG_FEATURE_TR_EQUIV is not set
++CONFIG_TRUE=y
++CONFIG_TRUNCATE=y
++CONFIG_TSORT=y
++CONFIG_TTY=y
++CONFIG_UNAME=y
++CONFIG_UNAME_OSNAME="GNU/Linux"
++CONFIG_BB_ARCH=y
++CONFIG_UNIQ=y
++CONFIG_UNLINK=y
++CONFIG_USLEEP=y
++# CONFIG_UUDECODE is not set
++# CONFIG_BASE32 is not set
++CONFIG_BASE64=y
++# CONFIG_UUENCODE is not set
++CONFIG_WC=y
++# CONFIG_FEATURE_WC_LARGE is not set
++CONFIG_WHO=y
++CONFIG_W=y
++CONFIG_USERS=y
++CONFIG_WHOAMI=y
++CONFIG_YES=y
++
++#
++# Console Utilities
++#
++# CONFIG_CHVT is not set
++# CONFIG_CLEAR is not set
++# CONFIG_DEALLOCVT is not set
++# CONFIG_DUMPKMAP is not set
++# CONFIG_FGCONSOLE is not set
++# CONFIG_KBD_MODE is not set
++# CONFIG_LOADFONT is not set
++# CONFIG_SETFONT is not set
++# CONFIG_FEATURE_SETFONT_TEXTUAL_MAP is not set
++CONFIG_DEFAULT_SETFONT_DIR=""
++# CONFIG_FEATURE_LOADFONT_PSF2 is not set
++# CONFIG_FEATURE_LOADFONT_RAW is not set
++# CONFIG_LOADKMAP is not set
++# CONFIG_OPENVT is not set
++CONFIG_RESET=y
++# CONFIG_RESIZE is not set
++# CONFIG_FEATURE_RESIZE_PRINT is not set
++# CONFIG_SETCONSOLE is not set
++# CONFIG_FEATURE_SETCONSOLE_LONG_OPTIONS is not set
++# CONFIG_SETKEYCODES is not set
++# CONFIG_SETLOGCONS is not set
++# CONFIG_SHOWKEY is not set
++
++#
++# Debian Utilities
++#
++# CONFIG_PIPE_PROGRESS is not set
++# CONFIG_RUN_PARTS is not set
++# CONFIG_FEATURE_RUN_PARTS_LONG_OPTIONS is not set
++# CONFIG_FEATURE_RUN_PARTS_FANCY is not set
++# CONFIG_START_STOP_DAEMON is not set
++# CONFIG_FEATURE_START_STOP_DAEMON_LONG_OPTIONS is not set
++# CONFIG_FEATURE_START_STOP_DAEMON_FANCY is not set
++# CONFIG_WHICH is not set
++
++#
++# klibc-utils
++#
++# CONFIG_MINIPS is not set
++# CONFIG_NUKE is not set
++# CONFIG_RESUME is not set
++# CONFIG_RUN_INIT is not set
++
++#
++# Editors
++#
++CONFIG_AWK=y
++# CONFIG_FEATURE_AWK_LIBM is not set
++# CONFIG_FEATURE_AWK_GNU_EXTENSIONS is not set
++# CONFIG_CMP is not set
++CONFIG_DIFF=y
++# CONFIG_FEATURE_DIFF_LONG_OPTIONS is not set
++# CONFIG_FEATURE_DIFF_DIR is not set
++# CONFIG_ED is not set
++CONFIG_PATCH=y
++CONFIG_SED=y
++# CONFIG_VI is not set
++CONFIG_FEATURE_VI_MAX_LEN=0
++# CONFIG_FEATURE_VI_8BIT is not set
++# CONFIG_FEATURE_VI_COLON is not set
++# CONFIG_FEATURE_VI_COLON_EXPAND is not set
++# CONFIG_FEATURE_VI_YANKMARK is not set
++# CONFIG_FEATURE_VI_SEARCH is not set
++# CONFIG_FEATURE_VI_REGEX_SEARCH is not set
++# CONFIG_FEATURE_VI_USE_SIGNALS is not set
++# CONFIG_FEATURE_VI_DOT_CMD is not set
++# CONFIG_FEATURE_VI_READONLY is not set
++# CONFIG_FEATURE_VI_SETOPTS is not set
++# CONFIG_FEATURE_VI_SET is not set
++# CONFIG_FEATURE_VI_WIN_RESIZE is not set
++# CONFIG_FEATURE_VI_ASK_TERMINAL is not set
++# CONFIG_FEATURE_VI_UNDO is not set
++# CONFIG_FEATURE_VI_UNDO_QUEUE is not set
++CONFIG_FEATURE_VI_UNDO_QUEUE_MAX=0
++# CONFIG_FEATURE_VI_VERBOSE_STATUS is not set
++# CONFIG_FEATURE_ALLOW_EXEC is not set
++
++#
++# Finding Utilities
++#
++CONFIG_FIND=y
++# CONFIG_FEATURE_FIND_PRINT0 is not set
++# CONFIG_FEATURE_FIND_MTIME is not set
++# CONFIG_FEATURE_FIND_ATIME is not set
++# CONFIG_FEATURE_FIND_CTIME is not set
++# CONFIG_FEATURE_FIND_MMIN is not set
++# CONFIG_FEATURE_FIND_AMIN is not set
++# CONFIG_FEATURE_FIND_CMIN is not set
++# CONFIG_FEATURE_FIND_PERM is not set
++CONFIG_FEATURE_FIND_TYPE=y
++CONFIG_FEATURE_FIND_EXECUTABLE=y
++# CONFIG_FEATURE_FIND_XDEV is not set
++# CONFIG_FEATURE_FIND_MAXDEPTH is not set
++# CONFIG_FEATURE_FIND_NEWER is not set
++# CONFIG_FEATURE_FIND_INUM is not set
++# CONFIG_FEATURE_FIND_SAMEFILE is not set
++CONFIG_FEATURE_FIND_EXEC=y
++CONFIG_FEATURE_FIND_EXEC_PLUS=y
++CONFIG_FEATURE_FIND_USER=y
++# CONFIG_FEATURE_FIND_GROUP is not set
++# CONFIG_FEATURE_FIND_NOT is not set
++# CONFIG_FEATURE_FIND_DEPTH is not set
++# CONFIG_FEATURE_FIND_PAREN is not set
++# CONFIG_FEATURE_FIND_SIZE is not set
++# CONFIG_FEATURE_FIND_PRUNE is not set
++# CONFIG_FEATURE_FIND_QUIT is not set
++# CONFIG_FEATURE_FIND_DELETE is not set
++# CONFIG_FEATURE_FIND_EMPTY is not set
++# CONFIG_FEATURE_FIND_PATH is not set
++CONFIG_FEATURE_FIND_REGEX=y
++# CONFIG_FEATURE_FIND_CONTEXT is not set
++# CONFIG_FEATURE_FIND_LINKS is not set
++CONFIG_GREP=y
++# CONFIG_EGREP is not set
++# CONFIG_FGREP is not set
++# CONFIG_FEATURE_GREP_CONTEXT is not set
++CONFIG_XARGS=y
++# CONFIG_FEATURE_XARGS_SUPPORT_CONFIRMATION is not set
++CONFIG_FEATURE_XARGS_SUPPORT_QUOTES=y
++CONFIG_FEATURE_XARGS_SUPPORT_TERMOPT=y
++CONFIG_FEATURE_XARGS_SUPPORT_ZERO_TERM=y
++CONFIG_FEATURE_XARGS_SUPPORT_REPL_STR=y
++CONFIG_FEATURE_XARGS_SUPPORT_PARALLEL=y
++CONFIG_FEATURE_XARGS_SUPPORT_ARGS_FILE=y
++
++#
++# Init Utilities
++#
++# CONFIG_BOOTCHARTD is not set
++# CONFIG_FEATURE_BOOTCHARTD_BLOATED_HEADER is not set
++# CONFIG_FEATURE_BOOTCHARTD_CONFIG_FILE is not set
++# CONFIG_HALT is not set
++CONFIG_POWEROFF=y
++CONFIG_REBOOT=y
++CONFIG_FEATURE_WAIT_FOR_INIT=y
++# CONFIG_FEATURE_CALL_TELINIT is not set
++CONFIG_TELINIT_PATH=""
++CONFIG_INIT=y
++CONFIG_LINUXRC=y
++CONFIG_FEATURE_USE_INITTAB=y
++CONFIG_FEATURE_KILL_REMOVED=y
++CONFIG_FEATURE_KILL_DELAY=0
++CONFIG_FEATURE_INIT_SCTTY=y
++CONFIG_FEATURE_INIT_SYSLOG=y
++CONFIG_FEATURE_INIT_QUIET=y
++# CONFIG_FEATURE_INIT_COREDUMPS is not set
++CONFIG_INIT_TERMINAL_TYPE="linux"
++CONFIG_FEATURE_INIT_MODIFY_CMDLINE=y
++
++#
++# Login/Password Management Utilities
++#
++CONFIG_FEATURE_SHADOWPASSWDS=y
++# CONFIG_USE_BB_PWD_GRP is not set
++# CONFIG_USE_BB_SHADOW is not set
++# CONFIG_USE_BB_CRYPT is not set
++# CONFIG_USE_BB_CRYPT_SHA is not set
++# CONFIG_ADD_SHELL is not set
++# CONFIG_REMOVE_SHELL is not set
++CONFIG_ADDGROUP=y
++CONFIG_FEATURE_ADDUSER_TO_GROUP=y
++CONFIG_ADDUSER=y
++# CONFIG_FEATURE_CHECK_NAMES is not set
++CONFIG_LAST_ID=0
++CONFIG_FIRST_SYSTEM_ID=0
++CONFIG_LAST_SYSTEM_ID=0
++CONFIG_CHPASSWD=y
++CONFIG_FEATURE_DEFAULT_PASSWD_ALGO=""
++# CONFIG_CRYPTPW is not set
++# CONFIG_MKPASSWD is not set
++CONFIG_DELUSER=y
++CONFIG_DELGROUP=y
++CONFIG_FEATURE_DEL_USER_FROM_GROUP=y
++CONFIG_GETTY=y
++CONFIG_LOGIN=y
++# CONFIG_LOGIN_SESSION_AS_CHILD is not set
++CONFIG_LOGIN_SCRIPTS=y
++CONFIG_FEATURE_NOLOGIN=y
++# CONFIG_FEATURE_SECURETTY is not set
++CONFIG_PASSWD=y
++# CONFIG_FEATURE_PASSWD_WEAK_CHECK is not set
++CONFIG_SU=y
++CONFIG_FEATURE_SU_SYSLOG=y
++CONFIG_FEATURE_SU_CHECKS_SHELLS=y
++# CONFIG_FEATURE_SU_BLANK_PW_NEEDS_SECURE_TTY is not set
++CONFIG_SULOGIN=y
++# CONFIG_VLOCK is not set
++
++#
++# Linux Ext2 FS Progs
++#
++# CONFIG_CHATTR is not set
++# CONFIG_FSCK is not set
++# CONFIG_LSATTR is not set
++# CONFIG_TUNE2FS is not set
++
++#
++# Linux Module Utilities
++#
++# CONFIG_MODPROBE_SMALL is not set
++# CONFIG_DEPMOD is not set
++# CONFIG_INSMOD is not set
++# CONFIG_LSMOD is not set
++# CONFIG_FEATURE_LSMOD_PRETTY_2_6_OUTPUT is not set
++# CONFIG_MODINFO is not set
++# CONFIG_MODPROBE is not set
++# CONFIG_FEATURE_MODPROBE_BLACKLIST is not set
++# CONFIG_RMMOD is not set
++
++#
++# Options common to multiple modutils
++#
++# CONFIG_FEATURE_CMDLINE_MODULE_OPTIONS is not set
++# CONFIG_FEATURE_MODPROBE_SMALL_CHECK_ALREADY_LOADED is not set
++# CONFIG_FEATURE_2_4_MODULES is not set
++# CONFIG_FEATURE_INSMOD_VERSION_CHECKING is not set
++# CONFIG_FEATURE_INSMOD_KSYMOOPS_SYMBOLS is not set
++# CONFIG_FEATURE_INSMOD_LOADINKMEM is not set
++# CONFIG_FEATURE_INSMOD_LOAD_MAP is not set
++# CONFIG_FEATURE_INSMOD_LOAD_MAP_FULL is not set
++# CONFIG_FEATURE_CHECK_TAINTED_MODULE is not set
++# CONFIG_FEATURE_INSMOD_TRY_MMAP is not set
++# CONFIG_FEATURE_MODUTILS_ALIAS is not set
++# CONFIG_FEATURE_MODUTILS_SYMBOLS is not set
++CONFIG_DEFAULT_MODULES_DIR=""
++CONFIG_DEFAULT_DEPMOD_FILE=""
++
++#
++# Linux System Utilities
++#
++# CONFIG_ACPID is not set
++# CONFIG_FEATURE_ACPID_COMPAT is not set
++# CONFIG_BLKDISCARD is not set
++# CONFIG_BLKID is not set
++# CONFIG_FEATURE_BLKID_TYPE is not set
++# CONFIG_BLOCKDEV is not set
++# CONFIG_CAL is not set
++# CONFIG_CHRT is not set
++CONFIG_DMESG=y
++CONFIG_FEATURE_DMESG_PRETTY=y
++# CONFIG_EJECT is not set
++# CONFIG_FEATURE_EJECT_SCSI is not set
++# CONFIG_FALLOCATE is not set
++# CONFIG_FATATTR is not set
++# CONFIG_FBSET is not set
++# CONFIG_FEATURE_FBSET_FANCY is not set
++# CONFIG_FEATURE_FBSET_READMODE is not set
++# CONFIG_FDFORMAT is not set
++# CONFIG_FDISK is not set
++# CONFIG_FDISK_SUPPORT_LARGE_DISKS is not set
++# CONFIG_FEATURE_FDISK_WRITABLE is not set
++# CONFIG_FEATURE_AIX_LABEL is not set
++# CONFIG_FEATURE_SGI_LABEL is not set
++# CONFIG_FEATURE_SUN_LABEL is not set
++# CONFIG_FEATURE_OSF_LABEL is not set
++# CONFIG_FEATURE_GPT_LABEL is not set
++# CONFIG_FEATURE_FDISK_ADVANCED is not set
++# CONFIG_FINDFS is not set
++# CONFIG_FLOCK is not set
++# CONFIG_FDFLUSH is not set
++# CONFIG_FREERAMDISK is not set
++# CONFIG_FSCK_MINIX is not set
++# CONFIG_FSFREEZE is not set
++# CONFIG_FSTRIM is not set
++# CONFIG_GETOPT is not set
++# CONFIG_FEATURE_GETOPT_LONG is not set
++# CONFIG_HEXDUMP is not set
++# CONFIG_HD is not set
++CONFIG_XXD=y
++# CONFIG_HWCLOCK is not set
++# CONFIG_FEATURE_HWCLOCK_ADJTIME_FHS is not set
++# CONFIG_IONICE is not set
++# CONFIG_IPCRM is not set
++# CONFIG_IPCS is not set
++# CONFIG_LAST is not set
++# CONFIG_FEATURE_LAST_FANCY is not set
++# CONFIG_LOSETUP is not set
++# CONFIG_LSPCI is not set
++# CONFIG_LSUSB is not set
++# CONFIG_MDEV is not set
++# CONFIG_FEATURE_MDEV_CONF is not set
++# CONFIG_FEATURE_MDEV_RENAME is not set
++# CONFIG_FEATURE_MDEV_RENAME_REGEXP is not set
++# CONFIG_FEATURE_MDEV_EXEC is not set
++# CONFIG_FEATURE_MDEV_LOAD_FIRMWARE is not set
++# CONFIG_FEATURE_MDEV_DAEMON is not set
++CONFIG_MESG=y
++CONFIG_FEATURE_MESG_ENABLE_ONLY_GROUP=y
++# CONFIG_MKE2FS is not set
++# CONFIG_MKFS_EXT2 is not set
++# CONFIG_MKFS_MINIX is not set
++# CONFIG_FEATURE_MINIX2 is not set
++# CONFIG_MKFS_REISER is not set
++# CONFIG_MKDOSFS is not set
++# CONFIG_MKFS_VFAT is not set
++# CONFIG_MKSWAP is not set
++# CONFIG_FEATURE_MKSWAP_UUID is not set
++CONFIG_MORE=y
++CONFIG_MOUNT=y
++# CONFIG_FEATURE_MOUNT_FAKE is not set
++# CONFIG_FEATURE_MOUNT_VERBOSE is not set
++# CONFIG_FEATURE_MOUNT_HELPERS is not set
++# CONFIG_FEATURE_MOUNT_LABEL is not set
++# CONFIG_FEATURE_MOUNT_NFS is not set
++# CONFIG_FEATURE_MOUNT_CIFS is not set
++# CONFIG_FEATURE_MOUNT_FLAGS is not set
++CONFIG_FEATURE_MOUNT_FSTAB=y
++# CONFIG_FEATURE_MOUNT_OTHERTAB is not set
++# CONFIG_MOUNTPOINT is not set
++CONFIG_NOLOGIN=y
++CONFIG_NOLOGIN_DEPENDENCIES=y
++# CONFIG_NSENTER is not set
++# CONFIG_PIVOT_ROOT is not set
++# CONFIG_RDATE is not set
++# CONFIG_RDEV is not set
++# CONFIG_READPROFILE is not set
++# CONFIG_RENICE is not set
++# CONFIG_REV is not set
++# CONFIG_RTCWAKE is not set
++# CONFIG_SCRIPT is not set
++# CONFIG_SCRIPTREPLAY is not set
++# CONFIG_SETARCH is not set
++CONFIG_LINUX32=y
++# CONFIG_LINUX64 is not set
++# CONFIG_SETPRIV is not set
++# CONFIG_FEATURE_SETPRIV_DUMP is not set
++# CONFIG_FEATURE_SETPRIV_CAPABILITIES is not set
++# CONFIG_FEATURE_SETPRIV_CAPABILITY_NAMES is not set
++# CONFIG_SETSID is not set
++# CONFIG_SWAPON is not set
++# CONFIG_FEATURE_SWAPON_DISCARD is not set
++# CONFIG_FEATURE_SWAPON_PRI is not set
++# CONFIG_SWAPOFF is not set
++# CONFIG_FEATURE_SWAPONOFF_LABEL is not set
++# CONFIG_SWITCH_ROOT is not set
++# CONFIG_TASKSET is not set
++# CONFIG_FEATURE_TASKSET_FANCY is not set
++# CONFIG_FEATURE_TASKSET_CPULIST is not set
++# CONFIG_UEVENT is not set
++CONFIG_UMOUNT=y
++CONFIG_FEATURE_UMOUNT_ALL=y
++# CONFIG_UNSHARE is not set
++# CONFIG_WALL is not set
++
++#
++# Common options for mount/umount
++#
++CONFIG_FEATURE_MOUNT_LOOP=y
++CONFIG_FEATURE_MOUNT_LOOP_CREATE=y
++# CONFIG_FEATURE_MTAB_SUPPORT is not set
++# CONFIG_VOLUMEID is not set
++# CONFIG_FEATURE_VOLUMEID_BCACHE is not set
++# CONFIG_FEATURE_VOLUMEID_BTRFS is not set
++# CONFIG_FEATURE_VOLUMEID_CRAMFS is not set
++# CONFIG_FEATURE_VOLUMEID_EROFS is not set
++# CONFIG_FEATURE_VOLUMEID_EXFAT is not set
++# CONFIG_FEATURE_VOLUMEID_EXT is not set
++# CONFIG_FEATURE_VOLUMEID_F2FS is not set
++# CONFIG_FEATURE_VOLUMEID_FAT is not set
++# CONFIG_FEATURE_VOLUMEID_HFS is not set
++# CONFIG_FEATURE_VOLUMEID_ISO9660 is not set
++# CONFIG_FEATURE_VOLUMEID_JFS is not set
++# CONFIG_FEATURE_VOLUMEID_LFS is not set
++# CONFIG_FEATURE_VOLUMEID_LINUXRAID is not set
++# CONFIG_FEATURE_VOLUMEID_LINUXSWAP is not set
++# CONFIG_FEATURE_VOLUMEID_LUKS is not set
++# CONFIG_FEATURE_VOLUMEID_MINIX is not set
++# CONFIG_FEATURE_VOLUMEID_NILFS is not set
++# CONFIG_FEATURE_VOLUMEID_NTFS is not set
++# CONFIG_FEATURE_VOLUMEID_OCFS2 is not set
++# CONFIG_FEATURE_VOLUMEID_REISERFS is not set
++# CONFIG_FEATURE_VOLUMEID_ROMFS is not set
++# CONFIG_FEATURE_VOLUMEID_SQUASHFS is not set
++# CONFIG_FEATURE_VOLUMEID_SYSV is not set
++# CONFIG_FEATURE_VOLUMEID_UBIFS is not set
++# CONFIG_FEATURE_VOLUMEID_UDF is not set
++# CONFIG_FEATURE_VOLUMEID_XFS is not set
++
++#
++# Miscellaneous Utilities
++#
++# CONFIG_ADJTIMEX is not set
++CONFIG_ASCII=y
++# CONFIG_BBCONFIG is not set
++# CONFIG_FEATURE_COMPRESS_BBCONFIG is not set
++# CONFIG_BC is not set
++# CONFIG_DC is not set
++# CONFIG_FEATURE_DC_BIG is not set
++# CONFIG_FEATURE_DC_LIBM is not set
++# CONFIG_FEATURE_BC_INTERACTIVE is not set
++# CONFIG_FEATURE_BC_LONG_OPTIONS is not set
++# CONFIG_BEEP is not set
++CONFIG_FEATURE_BEEP_FREQ=0
++CONFIG_FEATURE_BEEP_LENGTH_MS=0
++# CONFIG_CHAT is not set
++# CONFIG_FEATURE_CHAT_NOFAIL is not set
++# CONFIG_FEATURE_CHAT_TTY_HIFI is not set
++# CONFIG_FEATURE_CHAT_IMPLICIT_CR is not set
++# CONFIG_FEATURE_CHAT_SWALLOW_OPTS is not set
++# CONFIG_FEATURE_CHAT_SEND_ESCAPES is not set
++# CONFIG_FEATURE_CHAT_VAR_ABORT_LEN is not set
++# CONFIG_FEATURE_CHAT_CLR_ABORT is not set
++# CONFIG_CONSPY is not set
++# CONFIG_CROND is not set
++# CONFIG_FEATURE_CROND_D is not set
++# CONFIG_FEATURE_CROND_CALL_SENDMAIL is not set
++# CONFIG_FEATURE_CROND_SPECIAL_TIMES is not set
++CONFIG_FEATURE_CROND_DIR=""
++# CONFIG_CRONTAB is not set
++# CONFIG_DEVFSD is not set
++# CONFIG_DEVFSD_MODLOAD is not set
++# CONFIG_DEVFSD_FG_NP is not set
++# CONFIG_DEVFSD_VERBOSE is not set
++# CONFIG_FEATURE_DEVFS is not set
++# CONFIG_DEVMEM is not set
++# CONFIG_FBSPLASH is not set
++# CONFIG_FLASH_ERASEALL is not set
++# CONFIG_FLASH_LOCK is not set
++# CONFIG_FLASH_UNLOCK is not set
++# CONFIG_FLASHCP is not set
++# CONFIG_HDPARM is not set
++# CONFIG_FEATURE_HDPARM_GET_IDENTITY is not set
++# CONFIG_FEATURE_HDPARM_HDIO_SCAN_HWIF is not set
++# CONFIG_FEATURE_HDPARM_HDIO_UNREGISTER_HWIF is not set
++# CONFIG_FEATURE_HDPARM_HDIO_DRIVE_RESET is not set
++# CONFIG_FEATURE_HDPARM_HDIO_TRISTATE_HWIF is not set
++# CONFIG_FEATURE_HDPARM_HDIO_GETSET_DMA is not set
++# CONFIG_HEXEDIT is not set
++# CONFIG_I2CGET is not set
++# CONFIG_I2CSET is not set
++# CONFIG_I2CDUMP is not set
++# CONFIG_I2CDETECT is not set
++# CONFIG_I2CTRANSFER is not set
++# CONFIG_INOTIFYD is not set
++# CONFIG_LESS is not set
++CONFIG_FEATURE_LESS_MAXLINES=0
++# CONFIG_FEATURE_LESS_BRACKETS is not set
++# CONFIG_FEATURE_LESS_FLAGS is not set
++# CONFIG_FEATURE_LESS_TRUNCATE is not set
++# CONFIG_FEATURE_LESS_MARKS is not set
++# CONFIG_FEATURE_LESS_REGEXP is not set
++# CONFIG_FEATURE_LESS_WINCH is not set
++# CONFIG_FEATURE_LESS_ASK_TERMINAL is not set
++# CONFIG_FEATURE_LESS_DASHCMD is not set
++# CONFIG_FEATURE_LESS_LINENUMS is not set
++# CONFIG_FEATURE_LESS_RAW is not set
++# CONFIG_FEATURE_LESS_ENV is not set
++# CONFIG_LSSCSI is not set
++# CONFIG_MAKEDEVS is not set
++# CONFIG_FEATURE_MAKEDEVS_LEAF is not set
++# CONFIG_FEATURE_MAKEDEVS_TABLE is not set
++# CONFIG_MAN is not set
++# CONFIG_MICROCOM is not set
++# CONFIG_MIM is not set
++# CONFIG_MT is not set
++# CONFIG_NANDWRITE is not set
++# CONFIG_NANDDUMP is not set
++# CONFIG_PARTPROBE is not set
++# CONFIG_RAIDAUTORUN is not set
++# CONFIG_READAHEAD is not set
++# CONFIG_RFKILL is not set
++# CONFIG_RUNLEVEL is not set
++# CONFIG_RX is not set
++# CONFIG_SEEDRNG is not set
++# CONFIG_SETFATTR is not set
++# CONFIG_SETSERIAL is not set
++CONFIG_STRINGS=y
++# CONFIG_TIME is not set
++CONFIG_TREE=y
++CONFIG_TS=y
++# CONFIG_TTYSIZE is not set
++# CONFIG_UBIATTACH is not set
++# CONFIG_UBIDETACH is not set
++# CONFIG_UBIMKVOL is not set
++# CONFIG_UBIRMVOL is not set
++# CONFIG_UBIRSVOL is not set
++# CONFIG_UBIUPDATEVOL is not set
++# CONFIG_UBIRENAME is not set
++# CONFIG_VOLNAME is not set
++# CONFIG_WATCHDOG is not set
++# CONFIG_FEATURE_WATCHDOG_OPEN_TWICE is not set
++
++#
++# Networking Utilities
++#
++# CONFIG_FEATURE_IPV6 is not set
++# CONFIG_FEATURE_UNIX_LOCAL is not set
++# CONFIG_FEATURE_PREFER_IPV4_ADDRESS is not set
++# CONFIG_VERBOSE_RESOLUTION_ERRORS is not set
++# CONFIG_FEATURE_ETC_NETWORKS is not set
++# CONFIG_FEATURE_ETC_SERVICES is not set
++# CONFIG_FEATURE_HWIB is not set
++# CONFIG_FEATURE_TLS_SHA1 is not set
++# CONFIG_ARP is not set
++# CONFIG_ARPING is not set
++# CONFIG_BRCTL is not set
++# CONFIG_FEATURE_BRCTL_FANCY is not set
++# CONFIG_FEATURE_BRCTL_SHOW is not set
++# CONFIG_DNSD is not set
++# CONFIG_ETHER_WAKE is not set
++# CONFIG_FTPD is not set
++# CONFIG_FEATURE_FTPD_WRITE is not set
++# CONFIG_FEATURE_FTPD_ACCEPT_BROKEN_LIST is not set
++# CONFIG_FEATURE_FTPD_AUTHENTICATION is not set
++# CONFIG_FTPGET is not set
++# CONFIG_FTPPUT is not set
++# CONFIG_FEATURE_FTPGETPUT_LONG_OPTIONS is not set
++CONFIG_HOSTNAME=y
++# CONFIG_DNSDOMAINNAME is not set
++# CONFIG_HTTPD is not set
++CONFIG_FEATURE_HTTPD_PORT_DEFAULT=0
++# CONFIG_FEATURE_HTTPD_RANGES is not set
++# CONFIG_FEATURE_HTTPD_SETUID is not set
++# CONFIG_FEATURE_HTTPD_BASIC_AUTH is not set
++# CONFIG_FEATURE_HTTPD_AUTH_MD5 is not set
++# CONFIG_FEATURE_HTTPD_CGI is not set
++# CONFIG_FEATURE_HTTPD_CONFIG_WITH_SCRIPT_INTERPR is not set
++# CONFIG_FEATURE_HTTPD_SET_REMOTE_PORT_TO_ENV is not set
++# CONFIG_FEATURE_HTTPD_ENCODE_URL_STR is not set
++# CONFIG_FEATURE_HTTPD_ERROR_PAGES is not set
++# CONFIG_FEATURE_HTTPD_PROXY is not set
++# CONFIG_FEATURE_HTTPD_GZIP is not set
++# CONFIG_FEATURE_HTTPD_ETAG is not set
++# CONFIG_FEATURE_HTTPD_LAST_MODIFIED is not set
++# CONFIG_FEATURE_HTTPD_DATE is not set
++# CONFIG_FEATURE_HTTPD_ACL_IP is not set
++# CONFIG_IFCONFIG is not set
++# CONFIG_FEATURE_IFCONFIG_STATUS is not set
++# CONFIG_FEATURE_IFCONFIG_SLIP is not set
++# CONFIG_FEATURE_IFCONFIG_MEMSTART_IOADDR_IRQ is not set
++# CONFIG_FEATURE_IFCONFIG_HW is not set
++# CONFIG_FEATURE_IFCONFIG_BROADCAST_PLUS is not set
++# CONFIG_IFENSLAVE is not set
++# CONFIG_IFPLUGD is not set
++# CONFIG_IFUP is not set
++# CONFIG_IFDOWN is not set
++CONFIG_IFUPDOWN_IFSTATE_PATH=""
++# CONFIG_FEATURE_IFUPDOWN_IP is not set
++# CONFIG_FEATURE_IFUPDOWN_IPV4 is not set
++# CONFIG_FEATURE_IFUPDOWN_IPV6 is not set
++# CONFIG_FEATURE_IFUPDOWN_MAPPING is not set
++# CONFIG_FEATURE_IFUPDOWN_EXTERNAL_DHCP is not set
++# CONFIG_INETD is not set
++# CONFIG_FEATURE_INETD_SUPPORT_BUILTIN_ECHO is not set
++# CONFIG_FEATURE_INETD_SUPPORT_BUILTIN_DISCARD is not set
++# CONFIG_FEATURE_INETD_SUPPORT_BUILTIN_TIME is not set
++# CONFIG_FEATURE_INETD_SUPPORT_BUILTIN_DAYTIME is not set
++# CONFIG_FEATURE_INETD_SUPPORT_BUILTIN_CHARGEN is not set
++# CONFIG_FEATURE_INETD_RPC is not set
++# CONFIG_IP is not set
++# CONFIG_IPADDR is not set
++# CONFIG_IPLINK is not set
++# CONFIG_IPROUTE is not set
++# CONFIG_IPTUNNEL is not set
++# CONFIG_IPRULE is not set
++# CONFIG_IPNEIGH is not set
++# CONFIG_FEATURE_IP_ADDRESS is not set
++# CONFIG_FEATURE_IP_LINK is not set
++# CONFIG_FEATURE_IP_ROUTE is not set
++CONFIG_FEATURE_IP_ROUTE_DIR=""
++# CONFIG_FEATURE_IP_TUNNEL is not set
++# CONFIG_FEATURE_IP_RULE is not set
++# CONFIG_FEATURE_IP_NEIGH is not set
++# CONFIG_FEATURE_IP_RARE_PROTOCOLS is not set
++# CONFIG_IPCALC is not set
++# CONFIG_FEATURE_IPCALC_LONG_OPTIONS is not set
++# CONFIG_FEATURE_IPCALC_FANCY is not set
++# CONFIG_FAKEIDENTD is not set
++# CONFIG_NAMEIF is not set
++# CONFIG_FEATURE_NAMEIF_EXTENDED is not set
++# CONFIG_NBDCLIENT is not set
++# CONFIG_NC is not set
++# CONFIG_NETCAT is not set
++# CONFIG_NC_SERVER is not set
++# CONFIG_NC_EXTRA is not set
++# CONFIG_NC_110_COMPAT is not set
++# CONFIG_NETSTAT is not set
++# CONFIG_FEATURE_NETSTAT_WIDE is not set
++# CONFIG_FEATURE_NETSTAT_PRG is not set
++# CONFIG_NSLOOKUP is not set
++# CONFIG_FEATURE_NSLOOKUP_BIG is not set
++# CONFIG_FEATURE_NSLOOKUP_LONG_OPTIONS is not set
++# CONFIG_NTPD is not set
++# CONFIG_FEATURE_NTPD_SERVER is not set
++# CONFIG_FEATURE_NTPD_CONF is not set
++# CONFIG_FEATURE_NTP_AUTH is not set
++# CONFIG_PING is not set
++# CONFIG_PING6 is not set
++# CONFIG_FEATURE_FANCY_PING is not set
++# CONFIG_PSCAN is not set
++# CONFIG_ROUTE is not set
++# CONFIG_SLATTACH is not set
++# CONFIG_SSL_CLIENT is not set
++# CONFIG_TC is not set
++# CONFIG_FEATURE_TC_INGRESS is not set
++# CONFIG_TCPSVD is not set
++# CONFIG_UDPSVD is not set
++# CONFIG_TELNET is not set
++# CONFIG_FEATURE_TELNET_TTYPE is not set
++# CONFIG_FEATURE_TELNET_AUTOLOGIN is not set
++# CONFIG_FEATURE_TELNET_WIDTH is not set
++# CONFIG_TELNETD is not set
++# CONFIG_FEATURE_TELNETD_STANDALONE is not set
++CONFIG_FEATURE_TELNETD_PORT_DEFAULT=0
++# CONFIG_FEATURE_TELNETD_INETD_WAIT is not set
++# CONFIG_TFTP is not set
++# CONFIG_FEATURE_TFTP_PROGRESS_BAR is not set
++# CONFIG_FEATURE_TFTP_HPA_COMPAT is not set
++# CONFIG_TFTPD is not set
++# CONFIG_FEATURE_TFTP_GET is not set
++# CONFIG_FEATURE_TFTP_PUT is not set
++# CONFIG_FEATURE_TFTP_BLOCKSIZE is not set
++# CONFIG_TFTP_DEBUG is not set
++# CONFIG_TLS is not set
++# CONFIG_TRACEROUTE is not set
++# CONFIG_TRACEROUTE6 is not set
++# CONFIG_FEATURE_TRACEROUTE_VERBOSE is not set
++# CONFIG_FEATURE_TRACEROUTE_USE_ICMP is not set
++# CONFIG_TUNCTL is not set
++# CONFIG_FEATURE_TUNCTL_UG is not set
++# CONFIG_VCONFIG is not set
++# CONFIG_WGET is not set
++# CONFIG_FEATURE_WGET_LONG_OPTIONS is not set
++# CONFIG_FEATURE_WGET_STATUSBAR is not set
++# CONFIG_FEATURE_WGET_FTP is not set
++# CONFIG_FEATURE_WGET_AUTHENTICATION is not set
++# CONFIG_FEATURE_WGET_TIMEOUT is not set
++# CONFIG_FEATURE_WGET_HTTPS is not set
++# CONFIG_FEATURE_WGET_OPENSSL is not set
++# CONFIG_WHOIS is not set
++# CONFIG_ZCIP is not set
++# CONFIG_UDHCPD is not set
++# CONFIG_FEATURE_UDHCPD_BASE_IP_ON_MAC is not set
++# CONFIG_FEATURE_UDHCPD_WRITE_LEASES_EARLY is not set
++CONFIG_DHCPD_LEASES_FILE=""
++# CONFIG_DUMPLEASES is not set
++# CONFIG_DHCPRELAY is not set
++# CONFIG_UDHCPC is not set
++# CONFIG_FEATURE_UDHCPC_ARPING is not set
++# CONFIG_FEATURE_UDHCPC_SANITIZEOPT is not set
++CONFIG_UDHCPC_DEFAULT_SCRIPT=""
++CONFIG_UDHCPC6_DEFAULT_SCRIPT=""
++# CONFIG_UDHCPC6 is not set
++# CONFIG_FEATURE_UDHCPC6_RFC3646 is not set
++# CONFIG_FEATURE_UDHCPC6_RFC4704 is not set
++# CONFIG_FEATURE_UDHCPC6_RFC4833 is not set
++# CONFIG_FEATURE_UDHCPC6_RFC5970 is not set
++CONFIG_UDHCPC_DEFAULT_INTERFACE=""
++# CONFIG_FEATURE_UDHCP_PORT is not set
++CONFIG_UDHCP_DEBUG=0
++CONFIG_UDHCPC_SLACK_FOR_BUGGY_SERVERS=0
++# CONFIG_FEATURE_UDHCP_RFC3397 is not set
++# CONFIG_FEATURE_UDHCP_8021Q is not set
++CONFIG_IFUPDOWN_UDHCPC_CMD_OPTIONS=""
++
++#
++# Print Utilities
++#
++# CONFIG_LPD is not set
++# CONFIG_LPR is not set
++# CONFIG_LPQ is not set
++
++#
++# Mail Utilities
++#
++CONFIG_FEATURE_MIME_CHARSET=""
++# CONFIG_MAKEMIME is not set
++# CONFIG_POPMAILDIR is not set
++# CONFIG_FEATURE_POPMAILDIR_DELIVERY is not set
++# CONFIG_REFORMIME is not set
++# CONFIG_FEATURE_REFORMIME_COMPAT is not set
++# CONFIG_SENDMAIL is not set
++
++#
++# Process Utilities
++#
++# CONFIG_FEATURE_FAST_TOP is not set
++# CONFIG_FEATURE_SHOW_THREADS is not set
++CONFIG_FREE=y
++# CONFIG_FUSER is not set
++# CONFIG_IOSTAT is not set
++CONFIG_KILL=y
++CONFIG_KILLALL=y
++# CONFIG_KILLALL5 is not set
++CONFIG_LSOF=y
++# CONFIG_MPSTAT is not set
++# CONFIG_NMETER is not set
++# CONFIG_PGREP is not set
++CONFIG_PKILL=y
++# CONFIG_PIDOF is not set
++# CONFIG_FEATURE_PIDOF_SINGLE is not set
++# CONFIG_FEATURE_PIDOF_OMIT is not set
++# CONFIG_PMAP is not set
++# CONFIG_POWERTOP is not set
++# CONFIG_FEATURE_POWERTOP_INTERACTIVE is not set
++CONFIG_PS=y
++# CONFIG_FEATURE_PS_WIDE is not set
++CONFIG_FEATURE_PS_LONG=y
++# CONFIG_FEATURE_PS_TIME is not set
++# CONFIG_FEATURE_PS_UNUSUAL_SYSTEMS is not set
++# CONFIG_FEATURE_PS_ADDITIONAL_COLUMNS is not set
++# CONFIG_PSTREE is not set
++# CONFIG_PWDX is not set
++# CONFIG_SMEMCAP is not set
++# CONFIG_BB_SYSCTL is not set
++CONFIG_TOP=y
++CONFIG_FEATURE_TOP_INTERACTIVE=y
++CONFIG_FEATURE_TOP_CPU_USAGE_PERCENTAGE=y
++CONFIG_FEATURE_TOP_CPU_GLOBAL_PERCENTS=y
++CONFIG_FEATURE_TOP_SMP_CPU=y
++CONFIG_FEATURE_TOP_DECIMALS=y
++CONFIG_FEATURE_TOP_SMP_PROCESS=y
++CONFIG_FEATURE_TOPMEM=y
++CONFIG_UPTIME=y
++# CONFIG_FEATURE_UPTIME_UTMP_SUPPORT is not set
++CONFIG_WATCH=y
++
++#
++# Runit Utilities
++#
++# CONFIG_CHPST is not set
++# CONFIG_SETUIDGID is not set
++# CONFIG_ENVUIDGID is not set
++# CONFIG_ENVDIR is not set
++# CONFIG_SOFTLIMIT is not set
++# CONFIG_RUNSV is not set
++# CONFIG_RUNSVDIR is not set
++# CONFIG_FEATURE_RUNSVDIR_LOG is not set
++# CONFIG_SV is not set
++CONFIG_SV_DEFAULT_SERVICE_DIR=""
++# CONFIG_SVC is not set
++# CONFIG_SVOK is not set
++# CONFIG_SVLOGD is not set
++# CONFIG_CHCON is not set
++# CONFIG_GETENFORCE is not set
++# CONFIG_GETSEBOOL is not set
++# CONFIG_LOAD_POLICY is not set
++# CONFIG_MATCHPATHCON is not set
++# CONFIG_RUNCON is not set
++# CONFIG_SELINUXENABLED is not set
++# CONFIG_SESTATUS is not set
++# CONFIG_SETENFORCE is not set
++# CONFIG_SETFILES is not set
++# CONFIG_FEATURE_SETFILES_CHECK_OPTION is not set
++# CONFIG_RESTORECON is not set
++# CONFIG_SETSEBOOL is not set
++
++#
++# Shells
++#
++# CONFIG_SH_IS_ASH is not set
++CONFIG_SH_IS_HUSH=y
++# CONFIG_SH_IS_NONE is not set
++# CONFIG_BASH_IS_ASH is not set
++# CONFIG_BASH_IS_HUSH is not set
++CONFIG_BASH_IS_NONE=y
++# CONFIG_SHELL_ASH is not set
++# CONFIG_ASH is not set
++# CONFIG_ASH_OPTIMIZE_FOR_SIZE is not set
++# CONFIG_ASH_INTERNAL_GLOB is not set
++# CONFIG_ASH_BASH_COMPAT is not set
++# CONFIG_ASH_BASH_SOURCE_CURDIR is not set
++# CONFIG_ASH_BASH_NOT_FOUND_HOOK is not set
++# CONFIG_ASH_JOB_CONTROL is not set
++# CONFIG_ASH_ALIAS is not set
++# CONFIG_ASH_RANDOM_SUPPORT is not set
++# CONFIG_ASH_EXPAND_PRMT is not set
++# CONFIG_ASH_IDLE_TIMEOUT is not set
++# CONFIG_ASH_MAIL is not set
++# CONFIG_ASH_ECHO is not set
++# CONFIG_ASH_PRINTF is not set
++# CONFIG_ASH_TEST is not set
++# CONFIG_ASH_SLEEP is not set
++# CONFIG_ASH_HELP is not set
++# CONFIG_ASH_GETOPTS is not set
++# CONFIG_ASH_CMDCMD is not set
++# CONFIG_CTTYHACK is not set
++CONFIG_HUSH=y
++CONFIG_SHELL_HUSH=y
++CONFIG_HUSH_BASH_COMPAT=y
++CONFIG_HUSH_BRACE_EXPANSION=y
++# CONFIG_HUSH_BASH_SOURCE_CURDIR is not set
++CONFIG_HUSH_LINENO_VAR=y
++CONFIG_HUSH_INTERACTIVE=y
++CONFIG_HUSH_SAVEHISTORY=y
++CONFIG_HUSH_JOB=y
++CONFIG_HUSH_TICK=y
++CONFIG_HUSH_IF=y
++CONFIG_HUSH_LOOPS=y
++CONFIG_HUSH_CASE=y
++CONFIG_HUSH_FUNCTIONS=y
++CONFIG_HUSH_LOCAL=y
++CONFIG_HUSH_RANDOM_SUPPORT=y
++CONFIG_HUSH_MODE_X=y
++CONFIG_HUSH_ECHO=y
++CONFIG_HUSH_PRINTF=y
++CONFIG_HUSH_TEST=y
++CONFIG_HUSH_HELP=y
++CONFIG_HUSH_EXPORT=y
++CONFIG_HUSH_EXPORT_N=y
++CONFIG_HUSH_READONLY=y
++CONFIG_HUSH_KILL=y
++CONFIG_HUSH_WAIT=y
++CONFIG_HUSH_COMMAND=y
++CONFIG_HUSH_TRAP=y
++CONFIG_HUSH_TYPE=y
++CONFIG_HUSH_TIMES=y
++CONFIG_HUSH_READ=y
++CONFIG_HUSH_SET=y
++CONFIG_HUSH_UNSET=y
++CONFIG_HUSH_ULIMIT=y
++CONFIG_HUSH_UMASK=y
++CONFIG_HUSH_GETOPTS=y
++# CONFIG_HUSH_MEMLEAK is not set
++
++#
++# Options common to all shells
++#
++CONFIG_FEATURE_SH_MATH=y
++CONFIG_FEATURE_SH_MATH_64=y
++CONFIG_FEATURE_SH_MATH_BASE=y
++CONFIG_FEATURE_SH_EXTRA_QUIET=y
++# CONFIG_FEATURE_SH_STANDALONE is not set
++CONFIG_FEATURE_SH_NOFORK=y
++CONFIG_FEATURE_SH_READ_FRAC=y
++# CONFIG_FEATURE_SH_HISTFILESIZE is not set
++# CONFIG_FEATURE_SH_EMBEDDED_SCRIPTS is not set
++
++#
++# System Logging Utilities
++#
++# CONFIG_KLOGD is not set
++# CONFIG_FEATURE_KLOGD_KLOGCTL is not set
++# CONFIG_LOGGER is not set
++# CONFIG_LOGREAD is not set
++# CONFIG_FEATURE_LOGREAD_REDUCED_LOCKING is not set
++# CONFIG_SYSLOGD is not set
++# CONFIG_FEATURE_ROTATE_LOGFILE is not set
++# CONFIG_FEATURE_REMOTE_LOG is not set
++# CONFIG_FEATURE_SYSLOGD_DUP is not set
++# CONFIG_FEATURE_SYSLOGD_CFG is not set
++# CONFIG_FEATURE_SYSLOGD_PRECISE_TIMESTAMPS is not set
++CONFIG_FEATURE_SYSLOGD_READ_BUFFER_SIZE=0
++# CONFIG_FEATURE_IPC_SYSLOG is not set
++CONFIG_FEATURE_IPC_SYSLOG_BUFFER_SIZE=0
++# CONFIG_FEATURE_KMSG_SYSLOG is not set
+diff --git a/kernel_config b/kernel_config
+new file mode 100644
+index 0000000000..518b107bab
+--- /dev/null
++++ b/kernel_config
+@@ -0,0 +1,1309 @@
++#
++# Automatically generated file; DO NOT EDIT.
++# Linux/riscv 6.8.0-rc1 Kernel Configuration
++#
++CONFIG_CC_VERSION_TEXT="posOSix"
++CONFIG_CC_IS_GCC=y
++CONFIG_GCC_VERSION=130200
++CONFIG_CLANG_VERSION=0
++CONFIG_AS_IS_GNU=y
++CONFIG_AS_VERSION=24000
++CONFIG_LD_IS_BFD=y
++CONFIG_LD_VERSION=24000
++CONFIG_LLD_VERSION=0
++CONFIG_CC_CAN_LINK=y
++CONFIG_CC_CAN_LINK_STATIC=y
++CONFIG_CC_HAS_ASM_GOTO_OUTPUT=y
++CONFIG_CC_HAS_ASM_GOTO_TIED_OUTPUT=y
++CONFIG_CC_HAS_ASM_INLINE=y
++CONFIG_CC_HAS_NO_PROFILE_FN_ATTR=y
++CONFIG_PAHOLE_VERSION=0
++CONFIG_IRQ_WORK=y
++CONFIG_THREAD_INFO_IN_TASK=y
++
++#
++# General setup
++#
++CONFIG_BROKEN_ON_SMP=y
++CONFIG_INIT_ENV_ARG_LIMIT=32
++# CONFIG_COMPILE_TEST is not set
++# CONFIG_WERROR is not set
++CONFIG_LOCALVERSION="posOSix"
++CONFIG_LOCALVERSION_AUTO=n
++CONFIG_BUILD_SALT=""
++CONFIG_DEFAULT_INIT=""
++CONFIG_DEFAULT_HOSTNAME="(none)"
++# CONFIG_SYSVIPC is not set
++# CONFIG_WATCH_QUEUE is not set
++# CONFIG_USELIB is not set
++CONFIG_HAVE_ARCH_AUDITSYSCALL=y
++
++#
++# IRQ subsystem
++#
++CONFIG_GENERIC_IRQ_SHOW=y
++CONFIG_GENERIC_IRQ_SHOW_LEVEL=y
++CONFIG_HARDIRQS_SW_RESEND=y
++CONFIG_IRQ_DOMAIN=y
++CONFIG_IRQ_DOMAIN_HIERARCHY=y
++CONFIG_IRQ_FORCED_THREADING=y
++CONFIG_SPARSE_IRQ=y
++# end of IRQ subsystem
++
++CONFIG_GENERIC_IRQ_MULTI_HANDLER=y
++CONFIG_GENERIC_CLOCKEVENTS=y
++CONFIG_HAVE_POSIX_CPU_TIMERS_TASK_WORK=y
++CONFIG_POSIX_CPU_TIMERS_TASK_WORK=y
++
++#
++# Timers subsystem
++#
++CONFIG_HZ_PERIODIC=y
++# CONFIG_NO_HZ_IDLE is not set
++# CONFIG_NO_HZ is not set
++# CONFIG_HIGH_RES_TIMERS is not set
++# end of Timers subsystem
++
++#
++# BPF subsystem
++#
++# CONFIG_BPF_SYSCALL is not set
++# end of BPF subsystem
++
++CONFIG_PREEMPT_NONE_BUILD=y
++CONFIG_PREEMPT_NONE=y
++# CONFIG_PREEMPT_VOLUNTARY is not set
++# CONFIG_PREEMPT is not set
++# CONFIG_PREEMPT_DYNAMIC is not set
++
++#
++# CPU/Task time and stats accounting
++#
++CONFIG_TICK_CPU_ACCOUNTING=y
++# CONFIG_IRQ_TIME_ACCOUNTING is not set
++# CONFIG_BSD_PROCESS_ACCT is not set
++# CONFIG_PSI is not set
++# end of CPU/Task time and stats accounting
++
++#
++# RCU Subsystem
++#
++CONFIG_TINY_RCU=y
++# CONFIG_RCU_EXPERT is not set
++CONFIG_TINY_SRCU=y
++# end of RCU Subsystem
++
++# CONFIG_IKCONFIG is not set
++# CONFIG_IKHEADERS is not set
++CONFIG_LOG_BUF_SHIFT=16
++CONFIG_GENERIC_SCHED_CLOCK=y
++
++#
++# Scheduler features
++#
++# end of Scheduler features
++
++CONFIG_CC_IMPLICIT_FALLTHROUGH="-Wimplicit-fallthrough=5"
++CONFIG_GCC11_NO_ARRAY_BOUNDS=y
++CONFIG_CC_NO_ARRAY_BOUNDS=y
++# CONFIG_CGROUPS is not set
++# CONFIG_NAMESPACES is not set
++# CONFIG_CHECKPOINT_RESTORE is not set
++# CONFIG_SCHED_AUTOGROUP is not set
++# CONFIG_RELAY is not set
++CONFIG_BLK_DEV_INITRD=y
++CONFIG_INITRAMFS_SOURCE="${BR_BINARIES_DIR}/rootfs.cpio"
++CONFIG_INITRAMFS_ROOT_UID=0
++CONFIG_INITRAMFS_ROOT_GID=0
++# CONFIG_RD_GZIP is not set
++# CONFIG_RD_BZIP2 is not set
++# CONFIG_RD_LZMA is not set
++# CONFIG_RD_XZ is not set
++# CONFIG_RD_LZO is not set
++# CONFIG_RD_LZ4 is not set
++# CONFIG_RD_ZSTD is not set
++CONFIG_INITRAMFS_COMPRESSION_NONE=y
++# CONFIG_BOOT_CONFIG is not set
++CONFIG_INITRAMFS_PRESERVE_MTIME=y
++# CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE is not set
++CONFIG_CC_OPTIMIZE_FOR_SIZE=y
++CONFIG_HAVE_LD_DEAD_CODE_DATA_ELIMINATION=y
++CONFIG_LD_DEAD_CODE_DATA_ELIMINATION=y
++CONFIG_LD_ORPHAN_WARN=y
++CONFIG_LD_ORPHAN_WARN_LEVEL="warn"
++CONFIG_SYSCTL=y
++CONFIG_SYSCTL_EXCEPTION_TRACE=y
++CONFIG_EXPERT=y
++CONFIG_MULTIUSER=y
++# CONFIG_SGETMASK_SYSCALL is not set
++# CONFIG_SYSFS_SYSCALL is not set
++# CONFIG_FHANDLE is not set
++CONFIG_POSIX_TIMERS=y
++CONFIG_PRINTK=y
++CONFIG_BUG=y
++# CONFIG_BASE_FULL is not set
++CONFIG_FUTEX=y
++CONFIG_FUTEX_PI=y
++# CONFIG_EPOLL is not set
++# CONFIG_SIGNALFD is not set
++# CONFIG_TIMERFD is not set
++# CONFIG_EVENTFD is not set
++# CONFIG_AIO is not set
++# CONFIG_IO_URING is not set
++# CONFIG_ADVISE_SYSCALLS is not set
++CONFIG_MEMBARRIER=y
++# CONFIG_KCMP is not set
++CONFIG_RSEQ=y
++# CONFIG_DEBUG_RSEQ is not set
++CONFIG_CACHESTAT_SYSCALL=y
++# CONFIG_PC104 is not set
++# CONFIG_KALLSYMS is not set
++CONFIG_HAVE_PERF_EVENTS=y
++
++#
++# Kernel Performance Events And Counters
++#
++# CONFIG_PERF_EVENTS is not set
++# end of Kernel Performance Events And Counters
++
++# CONFIG_PROFILING is not set
++
++#
++# Kexec and crash features
++#
++# CONFIG_KEXEC is not set
++# CONFIG_CRASH_DUMP is not set
++# end of Kexec and crash features
++# end of General setup
++
++CONFIG_32BIT=y
++CONFIG_RISCV=y
++CONFIG_GCC_SUPPORTS_DYNAMIC_FTRACE=y
++CONFIG_RISCV_USE_LINKER_RELAXATION=y
++CONFIG_ARCH_MMAP_RND_BITS_MIN=8
++CONFIG_ARCH_MMAP_RND_COMPAT_BITS_MIN=8
++CONFIG_ARCH_MMAP_RND_BITS_MAX=17
++CONFIG_ARCH_MMAP_RND_COMPAT_BITS_MAX=17
++CONFIG_RISCV_M_MODE=y
++# CONFIG_MMU is not set
++CONFIG_PAGE_OFFSET=0x80000000
++CONFIG_ARCH_FLATMEM_ENABLE=y
++CONFIG_ARCH_SUPPORTS_UPROBES=y
++CONFIG_STACKTRACE_SUPPORT=y
++CONFIG_GENERIC_BUG=y
++CONFIG_GENERIC_CALIBRATE_DELAY=y
++CONFIG_GENERIC_CSUM=y
++CONFIG_GENERIC_HWEIGHT=y
++CONFIG_PGTABLE_LEVELS=2
++CONFIG_LOCKDEP_SUPPORT=y
++CONFIG_AS_HAS_INSN=y
++CONFIG_AS_HAS_OPTION_ARCH=y
++
++#
++# SoC selection
++#
++# CONFIG_SOC_MICROCHIP_POLARFIRE is not set
++# CONFIG_ARCH_RENESAS is not set
++# CONFIG_SOC_SIFIVE is not set
++# CONFIG_ARCH_SOPHGO is not set
++# CONFIG_SOC_STARFIVE is not set
++# CONFIG_SOC_VIRT is not set
++# CONFIG_SOC_CANAAN is not set
++# end of SoC selection
++
++#
++# CPU errata selection
++#
++# CONFIG_ERRATA_SIFIVE is not set
++# CONFIG_ERRATA_THEAD is not set
++# end of CPU errata selection
++
++#
++# Platform type
++#
++CONFIG_NONPORTABLE=y
++CONFIG_ARCH_RV32I=y
++# CONFIG_ARCH_RV64I is not set
++CONFIG_CMODEL_MEDLOW=y
++# CONFIG_CMODEL_MEDANY is not set
++# CONFIG_SMP is not set
++CONFIG_TUNE_GENERIC=y
++CONFIG_RISCV_ALTERNATIVE=y
++# CONFIG_RISCV_ISA_C is not set
++CONFIG_TOOLCHAIN_HAS_V=y
++CONFIG_TOOLCHAIN_HAS_ZBB=y
++CONFIG_TOOLCHAIN_HAS_ZIHINTPAUSE=y
++CONFIG_TOOLCHAIN_NEEDS_EXPLICIT_ZICSR_ZIFENCEI=y
++# CONFIG_FPU is not set
++# CONFIG_IRQ_STACKS is not set
++CONFIG_THREAD_SIZE_ORDER=1
++# CONFIG_RISCV_MISALIGNED is not set
++CONFIG_RISCV_EFFICIENT_UNALIGNED_ACCESS=y
++# end of Platform type
++
++#
++# Kernel features
++#
++CONFIG_HZ_100=y
++# CONFIG_HZ_250 is not set
++# CONFIG_HZ_300 is not set
++# CONFIG_HZ_1000 is not set
++CONFIG_HZ=100
++CONFIG_ARCH_SUPPORTS_KEXEC=y
++CONFIG_ARCH_SUPPORTS_CRASH_DUMP=y
++# end of Kernel features
++
++#
++# Boot options
++#
++CONFIG_CMDLINE="rw earlycon=uart8250,mmio,0x10000000,115200n8 console=hvc0"
++CONFIG_CMDLINE_FALLBACK=y
++# CONFIG_CMDLINE_EXTEND is not set
++# CONFIG_CMDLINE_FORCE is not set
++CONFIG_CC_HAVE_STACKPROTECTOR_TLS=y
++CONFIG_STACKPROTECTOR_PER_TASK=y
++CONFIG_PHYS_RAM_BASE_FIXED=y
++CONFIG_PHYS_RAM_BASE=0x80000000
++# CONFIG_RISCV_ISA_FALLBACK is not set
++# CONFIG_BUILTIN_DTB is not set
++# end of Boot options
++
++CONFIG_ARCH_PROC_KCORE_TEXT=y
++
++#
++# Power management options
++#
++# CONFIG_SUSPEND is not set
++# CONFIG_PM is not set
++CONFIG_ARCH_HIBERNATION_POSSIBLE=y
++CONFIG_ARCH_SUSPEND_POSSIBLE=y
++# end of Power management options
++
++#
++# CPU Power Management
++#
++
++#
++# CPU Idle
++#
++# CONFIG_CPU_IDLE is not set
++# end of CPU Idle
++
++#
++# CPU Frequency scaling
++#
++# CONFIG_CPU_FREQ is not set
++# end of CPU Frequency scaling
++# end of CPU Power Management
++
++# CONFIG_VIRTUALIZATION is not set
++
++#
++# General architecture-dependent options
++#
++CONFIG_GENERIC_ENTRY=y
++CONFIG_JUMP_LABEL=y
++# CONFIG_STATIC_KEYS_SELFTEST is not set
++CONFIG_HAVE_EFFICIENT_UNALIGNED_ACCESS=y
++CONFIG_HAVE_KPROBES=y
++CONFIG_HAVE_KRETPROBES=y
++CONFIG_HAVE_KPROBES_ON_FTRACE=y
++CONFIG_HAVE_FUNCTION_ERROR_INJECTION=y
++CONFIG_TRACE_IRQFLAGS_SUPPORT=y
++CONFIG_HAVE_ARCH_TRACEHOOK=y
++CONFIG_GENERIC_SMP_IDLE_THREAD=y
++CONFIG_GENERIC_IDLE_POLL_SETUP=y
++CONFIG_ARCH_HAS_FORTIFY_SOURCE=y
++CONFIG_HAVE_ARCH_THREAD_STRUCT_WHITELIST=y
++CONFIG_ARCH_WANTS_NO_INSTR=y
++CONFIG_HAVE_ASM_MODVERSIONS=y
++CONFIG_HAVE_REGS_AND_STACK_ACCESS_API=y
++CONFIG_HAVE_RSEQ=y
++CONFIG_HAVE_FUNCTION_ARG_ACCESS_API=y
++CONFIG_HAVE_PERF_REGS=y
++CONFIG_HAVE_PERF_USER_STACK_DUMP=y
++CONFIG_HAVE_ARCH_JUMP_LABEL=y
++CONFIG_HAVE_ARCH_JUMP_LABEL_RELATIVE=y
++CONFIG_MMU_LAZY_TLB_REFCOUNT=y
++CONFIG_HAVE_ARCH_SECCOMP=y
++CONFIG_HAVE_ARCH_SECCOMP_FILTER=y
++# CONFIG_SECCOMP is not set
++CONFIG_HAVE_STACKPROTECTOR=y
++CONFIG_STACKPROTECTOR=y
++CONFIG_STACKPROTECTOR_STRONG=y
++CONFIG_LTO_NONE=y
++CONFIG_ARCH_SUPPORTS_CFI_CLANG=y
++CONFIG_HAVE_CONTEXT_TRACKING_USER=y
++CONFIG_HAVE_IRQ_TIME_ACCOUNTING=y
++CONFIG_HAVE_MOVE_PUD=y
++CONFIG_HAVE_MOVE_PMD=y
++CONFIG_PAGE_SIZE_LESS_THAN_64KB=y
++CONFIG_PAGE_SIZE_LESS_THAN_256KB=y
++CONFIG_CLONE_BACKWARDS=y
++CONFIG_COMPAT_32BIT_TIME=y
++CONFIG_ARCH_OPTIONAL_KERNEL_RWX_DEFAULT=y
++CONFIG_ARCH_HAS_VDSO_DATA=y
++CONFIG_HAVE_PREEMPT_DYNAMIC=y
++CONFIG_HAVE_PREEMPT_DYNAMIC_KEY=y
++CONFIG_ARCH_WANT_LD_ORPHAN_WARN=y
++
++#
++# GCOV-based kernel profiling
++#
++CONFIG_ARCH_HAS_GCOV_PROFILE_ALL=y
++# end of GCOV-based kernel profiling
++
++CONFIG_HAVE_GCC_PLUGINS=y
++# CONFIG_GCC_PLUGINS is not set
++CONFIG_FUNCTION_ALIGNMENT=0
++# end of General architecture-dependent options
++
++CONFIG_RT_MUTEXES=y
++CONFIG_BASE_SMALL=1
++# CONFIG_MODULES is not set
++# CONFIG_BLOCK is not set
++CONFIG_INLINE_SPIN_UNLOCK_IRQ=y
++CONFIG_INLINE_READ_UNLOCK=y
++CONFIG_INLINE_READ_UNLOCK_IRQ=y
++CONFIG_INLINE_WRITE_UNLOCK=y
++CONFIG_INLINE_WRITE_UNLOCK_IRQ=y
++CONFIG_ARCH_SUPPORTS_ATOMIC_RMW=y
++CONFIG_ARCH_USE_QUEUED_RWLOCKS=y
++CONFIG_ARCH_HAS_MMIOWB=y
++CONFIG_ARCH_HAS_NON_OVERLAPPING_ADDRESS_SPACE=y
++CONFIG_ARCH_HAS_SYSCALL_WRAPPER=y
++
++#
++# Executable file formats
++#
++CONFIG_BINFMT_ELF_FDPIC=y
++CONFIG_ELFCORE=y
++CONFIG_BINFMT_SCRIPT=y
++CONFIG_ARCH_HAS_BINFMT_FLAT=y
++CONFIG_BINFMT_FLAT=y
++CONFIG_BINFMT_FLAT_NO_DATA_START_OFFSET=y
++# CONFIG_BINFMT_FLAT_OLD is not set
++# CONFIG_BINFMT_ZFLAT is not set
++# CONFIG_BINFMT_MISC is not set
++# CONFIG_COREDUMP is not set
++# end of Executable file formats
++
++#
++# Memory Management options
++#
++
++#
++# Slab allocator options
++#
++CONFIG_SLUB=y
++CONFIG_SLUB_TINY=y
++CONFIG_SLAB_MERGE_DEFAULT=y
++# end of Slab allocator options
++
++# CONFIG_SHUFFLE_PAGE_ALLOCATOR is not set
++# CONFIG_COMPAT_BRK is not set
++# CONFIG_MMAP_ALLOW_UNINITIALIZED is not set
++CONFIG_FLATMEM=y
++CONFIG_ARCH_WANT_OPTIMIZE_HUGETLB_VMEMMAP=y
++CONFIG_EXCLUSIVE_SYSTEM_RAM=y
++CONFIG_SPLIT_PTLOCK_CPUS=999999
++# CONFIG_PAGE_REPORTING is not set
++CONFIG_PCP_BATCH_SCALE_MAX=5
++CONFIG_NOMMU_INITIAL_TRIM_EXCESS=1
++CONFIG_ARCH_WANT_GENERAL_HUGETLB=y
++CONFIG_NEED_PER_CPU_KM=y
++CONFIG_GENERIC_EARLY_IOREMAP=y
++CONFIG_ARCH_HAS_CURRENT_STACK_POINTER=y
++# CONFIG_VM_EVENT_COUNTERS is not set
++# CONFIG_PERCPU_STATS is not set
++
++#
++# GUP_TEST needs to have DEBUG_FS enabled
++#
++# CONFIG_DMAPOOL_TEST is not set
++CONFIG_ARCH_HAS_PTE_SPECIAL=y
++# CONFIG_MEMFD_CREATE is not set
++CONFIG_LOCK_MM_AND_FIND_VMA=y
++
++#
++# Data Access Monitoring
++#
++# CONFIG_DAMON is not set
++# end of Data Access Monitoring
++# end of Memory Management options
++
++# CONFIG_NET is not set
++
++#
++# Device Drivers
++#
++CONFIG_HAVE_PCI=y
++# CONFIG_PCI is not set
++# CONFIG_PCCARD is not set
++
++#
++# Generic Driver Options
++#
++# CONFIG_UEVENT_HELPER is not set
++CONFIG_DEVTMPFS=y
++CONFIG_DEVTMPFS_MOUNT=y
++# CONFIG_DEVTMPFS_SAFE is not set
++CONFIG_STANDALONE=y
++CONFIG_PREVENT_FIRMWARE_BUILD=y
++
++#
++# Firmware loader
++#
++# CONFIG_FW_LOADER is not set
++# end of Firmware loader
++
++# CONFIG_ALLOW_DEV_COREDUMP is not set
++# CONFIG_DEBUG_DRIVER is not set
++# CONFIG_DEBUG_DEVRES is not set
++# CONFIG_DEBUG_TEST_DRIVER_REMOVE is not set
++CONFIG_GENERIC_CPU_DEVICES=y
++CONFIG_REGMAP=y
++CONFIG_REGMAP_MMIO=y
++CONFIG_GENERIC_ARCH_TOPOLOGY=y
++# CONFIG_FW_DEVLINK_SYNC_STATE_TIMEOUT is not set
++# end of Generic Driver Options
++
++#
++# Bus devices
++#
++# CONFIG_MHI_BUS is not set
++# CONFIG_MHI_BUS_EP is not set
++# end of Bus devices
++
++#
++# Cache Drivers
++#
++# CONFIG_AX45MP_L2_CACHE is not set
++# end of Cache Drivers
++
++#
++# Firmware Drivers
++#
++
++#
++# ARM System Control and Management Interface Protocol
++#
++# end of ARM System Control and Management Interface Protocol
++
++# CONFIG_FIRMWARE_MEMMAP is not set
++# CONFIG_FW_CFG_SYSFS is not set
++# CONFIG_GOOGLE_FIRMWARE is not set
++
++#
++# Qualcomm firmware drivers
++#
++# end of Qualcomm firmware drivers
++
++#
++# Tegra firmware driver
++#
++# end of Tegra firmware driver
++# end of Firmware Drivers
++
++# CONFIG_GNSS is not set
++# CONFIG_MTD is not set
++CONFIG_DTC=y
++CONFIG_OF=y
++# CONFIG_OF_UNITTEST is not set
++CONFIG_OF_FLATTREE=y
++CONFIG_OF_EARLY_FLATTREE=y
++CONFIG_OF_KOBJ=y
++CONFIG_OF_ADDRESS=y
++CONFIG_OF_IRQ=y
++CONFIG_OF_RESERVED_MEM=y
++# CONFIG_OF_OVERLAY is not set
++# CONFIG_PARPORT is not set
++
++#
++# NVME Support
++#
++# end of NVME Support
++
++#
++# Misc devices
++#
++# CONFIG_DUMMY_IRQ is not set
++# CONFIG_ENCLOSURE_SERVICES is not set
++# CONFIG_SRAM is not set
++# CONFIG_XILINX_SDFEC is not set
++# CONFIG_OPEN_DICE is not set
++# CONFIG_VCPU_STALL_DETECTOR is not set
++# CONFIG_NSM is not set
++# CONFIG_C2PORT is not set
++
++#
++# EEPROM support
++#
++# CONFIG_EEPROM_93CX6 is not set
++# end of EEPROM support
++
++#
++# Texas Instruments shared transport line discipline
++#
++# end of Texas Instruments shared transport line discipline
++
++#
++# Altera FPGA firmware download module (requires I2C)
++#
++# CONFIG_ECHO is not set
++# CONFIG_PVPANIC is not set
++# end of Misc devices
++
++#
++# SCSI device support
++#
++# end of SCSI device support
++
++#
++# Input device support
++#
++CONFIG_INPUT=y
++# CONFIG_INPUT_FF_MEMLESS is not set
++# CONFIG_INPUT_SPARSEKMAP is not set
++# CONFIG_INPUT_MATRIXKMAP is not set
++
++#
++# Userland interfaces
++#
++# CONFIG_INPUT_MOUSEDEV is not set
++# CONFIG_INPUT_JOYDEV is not set
++# CONFIG_INPUT_EVDEV is not set
++# CONFIG_INPUT_EVBUG is not set
++
++#
++# Input Device Drivers
++#
++# CONFIG_INPUT_KEYBOARD is not set
++# CONFIG_INPUT_MOUSE is not set
++# CONFIG_INPUT_JOYSTICK is not set
++# CONFIG_INPUT_TABLET is not set
++# CONFIG_INPUT_TOUCHSCREEN is not set
++# CONFIG_INPUT_MISC is not set
++# CONFIG_RMI4_CORE is not set
++
++#
++# Hardware I/O ports
++#
++# CONFIG_SERIO is not set
++# CONFIG_GAMEPORT is not set
++# end of Hardware I/O ports
++# end of Input device support
++
++#
++# Character devices
++#
++CONFIG_TTY=y
++CONFIG_VT=y
++CONFIG_CONSOLE_TRANSLATIONS=y
++CONFIG_VT_CONSOLE=y
++CONFIG_HW_CONSOLE=y
++# CONFIG_VT_HW_CONSOLE_BINDING is not set
++CONFIG_UNIX98_PTYS=y
++# CONFIG_LEGACY_PTYS is not set
++CONFIG_LEGACY_TIOCSTI=y
++# CONFIG_LDISC_AUTOLOAD is not set
++
++#
++# Serial drivers
++#
++CONFIG_SERIAL_EARLYCON=y
++CONFIG_SERIAL_8250=y
++# CONFIG_SERIAL_8250_DEPRECATED_OPTIONS is not set
++CONFIG_SERIAL_8250_16550A_VARIANTS=y
++# CONFIG_SERIAL_8250_FINTEK is not set
++CONFIG_SERIAL_8250_CONSOLE=y
++CONFIG_SERIAL_8250_NR_UARTS=1
++CONFIG_SERIAL_8250_RUNTIME_UARTS=1
++# CONFIG_SERIAL_8250_EXTENDED is not set
++# CONFIG_SERIAL_8250_DW is not set
++# CONFIG_SERIAL_8250_RT288X is not set
++CONFIG_SERIAL_OF_PLATFORM=y
++
++#
++# Non-8250 serial port support
++#
++# CONFIG_SERIAL_EARLYCON_SEMIHOST is not set
++# CONFIG_SERIAL_UARTLITE is not set
++CONFIG_SERIAL_CORE=y
++CONFIG_SERIAL_CORE_CONSOLE=y
++# CONFIG_SERIAL_SIFIVE is not set
++# CONFIG_SERIAL_SCCNXP is not set
++# CONFIG_SERIAL_ALTERA_JTAGUART is not set
++# CONFIG_SERIAL_ALTERA_UART is not set
++# CONFIG_SERIAL_XILINX_PS_UART is not set
++# CONFIG_SERIAL_ARC is not set
++# CONFIG_SERIAL_FSL_LPUART is not set
++# CONFIG_SERIAL_FSL_LINFLEXUART is not set
++# CONFIG_SERIAL_CONEXANT_DIGICOLOR is not set
++# CONFIG_SERIAL_SPRD is not set
++# end of Serial drivers
++
++# CONFIG_SERIAL_NONSTANDARD is not set
++# CONFIG_NULL_TTY is not set
++CONFIG_HVC_DRIVER=y
++CONFIG_HVC_RISCV_MINIRV32=y
++# CONFIG_SERIAL_DEV_BUS is not set
++# CONFIG_TTY_PRINTK is not set
++# CONFIG_VIRTIO_CONSOLE is not set
++# CONFIG_IPMI_HANDLER is not set
++# CONFIG_HW_RANDOM is not set
++# CONFIG_DEVMEM is not set
++# CONFIG_TCG_TPM is not set
++# CONFIG_XILLYBUS is not set
++# end of Character devices
++
++#
++# I2C support
++#
++# CONFIG_I2C is not set
++# end of I2C support
++
++# CONFIG_I3C is not set
++# CONFIG_SPI is not set
++# CONFIG_SPMI is not set
++# CONFIG_HSI is not set
++# CONFIG_PPS is not set
++
++#
++# PTP clock support
++#
++CONFIG_PTP_1588_CLOCK_OPTIONAL=y
++
++#
++# Enable PHYLIB and NETWORK_PHY_TIMESTAMPING to see the additional clocks.
++#
++# end of PTP clock support
++
++# CONFIG_PINCTRL is not set
++# CONFIG_GPIOLIB is not set
++# CONFIG_W1 is not set
++CONFIG_POWER_RESET=y
++# CONFIG_POWER_RESET_RESTART is not set
++CONFIG_POWER_RESET_SYSCON=y
++CONFIG_POWER_RESET_SYSCON_POWEROFF=y
++# CONFIG_SYSCON_REBOOT_MODE is not set
++# CONFIG_NVMEM_REBOOT_MODE is not set
++# CONFIG_POWER_SUPPLY is not set
++# CONFIG_HWMON is not set
++# CONFIG_THERMAL is not set
++# CONFIG_WATCHDOG is not set
++CONFIG_SSB_POSSIBLE=y
++# CONFIG_SSB is not set
++CONFIG_BCMA_POSSIBLE=y
++# CONFIG_BCMA is not set
++
++#
++# Multifunction device drivers
++#
++# CONFIG_MFD_ATMEL_FLEXCOM is not set
++# CONFIG_MFD_ATMEL_HLCDC is not set
++# CONFIG_MFD_MADERA is not set
++# CONFIG_MFD_HI6421_PMIC is not set
++# CONFIG_MFD_KEMPLD is not set
++# CONFIG_MFD_MT6397 is not set
++# CONFIG_MFD_SM501 is not set
++CONFIG_MFD_SYSCON=y
++# CONFIG_MFD_TQMX86 is not set
++# end of Multifunction device drivers
++
++# CONFIG_REGULATOR is not set
++# CONFIG_RC_CORE is not set
++
++#
++# CEC support
++#
++# CONFIG_MEDIA_CEC_SUPPORT is not set
++# end of CEC support
++
++# CONFIG_MEDIA_SUPPORT is not set
++
++#
++# Graphics support
++#
++# CONFIG_AUXDISPLAY is not set
++# CONFIG_DRM is not set
++# CONFIG_DRM_DEBUG_MODESET_LOCK is not set
++
++#
++# Frame buffer Devices
++#
++# CONFIG_FB is not set
++# end of Frame buffer Devices
++
++#
++# Backlight & LCD device support
++#
++# CONFIG_LCD_CLASS_DEVICE is not set
++# CONFIG_BACKLIGHT_CLASS_DEVICE is not set
++# end of Backlight & LCD device support
++
++#
++# Console display driver support
++#
++CONFIG_DUMMY_CONSOLE=y
++CONFIG_DUMMY_CONSOLE_COLUMNS=80
++CONFIG_DUMMY_CONSOLE_ROWS=25
++# end of Console display driver support
++# end of Graphics support
++
++# CONFIG_SOUND is not set
++# CONFIG_HID_SUPPORT is not set
++CONFIG_USB_OHCI_LITTLE_ENDIAN=y
++# CONFIG_USB_SUPPORT is not set
++# CONFIG_MMC is not set
++# CONFIG_MEMSTICK is not set
++# CONFIG_NEW_LEDS is not set
++# CONFIG_ACCESSIBILITY is not set
++CONFIG_EDAC_SUPPORT=y
++# CONFIG_RTC_CLASS is not set
++# CONFIG_DMADEVICES is not set
++
++#
++# DMABUF options
++#
++# CONFIG_SYNC_FILE is not set
++# CONFIG_DMABUF_HEAPS is not set
++# end of DMABUF options
++
++# CONFIG_VFIO is not set
++# CONFIG_VIRT_DRIVERS is not set
++CONFIG_VIRTIO_ANCHOR=y
++CONFIG_VIRTIO=y
++CONFIG_VIRTIO_MENU=y
++# CONFIG_VIRTIO_BALLOON is not set
++# CONFIG_VIRTIO_INPUT is not set
++CONFIG_VIRTIO_MMIO=y
++CONFIG_VIRTIO_MMIO_CMDLINE_DEVICES=y
++# CONFIG_VHOST_MENU is not set
++
++#
++# Microsoft Hyper-V guest support
++#
++# end of Microsoft Hyper-V guest support
++
++# CONFIG_GREYBUS is not set
++# CONFIG_COMEDI is not set
++# CONFIG_STAGING is not set
++# CONFIG_GOLDFISH is not set
++CONFIG_HAVE_CLK=y
++CONFIG_HAVE_CLK_PREPARE=y
++CONFIG_COMMON_CLK=y
++# CONFIG_COMMON_CLK_AXI_CLKGEN is not set
++# CONFIG_COMMON_CLK_FIXED_MMIO is not set
++# CONFIG_XILINX_VCU is not set
++# CONFIG_COMMON_CLK_XLNX_CLKWZRD is not set
++# CONFIG_HWSPINLOCK is not set
++
++#
++# Clock Source drivers
++#
++CONFIG_TIMER_OF=y
++CONFIG_TIMER_PROBE=y
++CONFIG_CLINT_TIMER=y
++# end of Clock Source drivers
++
++# CONFIG_MAILBOX is not set
++
++#
++# Remoteproc drivers
++#
++# CONFIG_REMOTEPROC is not set
++# end of Remoteproc drivers
++
++#
++# Rpmsg drivers
++#
++# CONFIG_RPMSG_VIRTIO is not set
++# end of Rpmsg drivers
++
++# CONFIG_SOUNDWIRE is not set
++
++#
++# SOC (System On Chip) specific Drivers
++#
++
++#
++# Amlogic SoC drivers
++#
++# end of Amlogic SoC drivers
++
++#
++# Broadcom SoC drivers
++#
++# end of Broadcom SoC drivers
++
++#
++# NXP/Freescale QorIQ SoC drivers
++#
++# end of NXP/Freescale QorIQ SoC drivers
++
++#
++# fujitsu SoC drivers
++#
++# end of fujitsu SoC drivers
++
++#
++# i.MX SoC drivers
++#
++# end of i.MX SoC drivers
++
++#
++# Enable LiteX SoC Builder specific drivers
++#
++# CONFIG_LITEX_SOC_CONTROLLER is not set
++# end of Enable LiteX SoC Builder specific drivers
++
++# CONFIG_WPCM450_SOC is not set
++
++#
++# Qualcomm SoC drivers
++#
++# end of Qualcomm SoC drivers
++
++# CONFIG_SOC_TI is not set
++
++#
++# Xilinx SoC drivers
++#
++# end of Xilinx SoC drivers
++# end of SOC (System On Chip) specific Drivers
++
++#
++# PM Domains
++#
++
++#
++# Amlogic PM Domains
++#
++# end of Amlogic PM Domains
++
++#
++# Broadcom PM Domains
++#
++# end of Broadcom PM Domains
++
++#
++# i.MX PM Domains
++#
++# end of i.MX PM Domains
++
++#
++# Qualcomm PM Domains
++#
++# end of Qualcomm PM Domains
++# end of PM Domains
++
++# CONFIG_PM_DEVFREQ is not set
++# CONFIG_EXTCON is not set
++# CONFIG_MEMORY is not set
++# CONFIG_IIO is not set
++# CONFIG_PWM is not set
++
++#
++# IRQ chip support
++#
++CONFIG_IRQCHIP=y
++# CONFIG_AL_FIC is not set
++# CONFIG_XILINX_INTC is not set
++CONFIG_RISCV_INTC=y
++CONFIG_SIFIVE_PLIC=y
++# end of IRQ chip support
++
++# CONFIG_IPACK_BUS is not set
++# CONFIG_RESET_CONTROLLER is not set
++
++#
++# PHY Subsystem
++#
++# CONFIG_GENERIC_PHY is not set
++# CONFIG_PHY_CAN_TRANSCEIVER is not set
++
++#
++# PHY drivers for Broadcom platforms
++#
++# CONFIG_BCM_KONA_USB2_PHY is not set
++# end of PHY drivers for Broadcom platforms
++
++# CONFIG_PHY_CADENCE_TORRENT is not set
++# CONFIG_PHY_CADENCE_DPHY is not set
++# CONFIG_PHY_CADENCE_DPHY_RX is not set
++# CONFIG_PHY_CADENCE_SALVO is not set
++# CONFIG_PHY_PXA_28NM_HSIC is not set
++# CONFIG_PHY_PXA_28NM_USB2 is not set
++# CONFIG_PHY_LAN966X_SERDES is not set
++# CONFIG_PHY_OCELOT_SERDES is not set
++# end of PHY Subsystem
++
++# CONFIG_POWERCAP is not set
++# CONFIG_MCB is not set
++# CONFIG_RAS is not set
++
++#
++# Android
++#
++# end of Android
++
++# CONFIG_DAX is not set
++# CONFIG_NVMEM is not set
++
++#
++# HW tracing support
++#
++# CONFIG_STM is not set
++# CONFIG_INTEL_TH is not set
++# end of HW tracing support
++
++# CONFIG_FPGA is not set
++# CONFIG_FSI is not set
++# CONFIG_SIOX is not set
++# CONFIG_SLIMBUS is not set
++# CONFIG_INTERCONNECT is not set
++# CONFIG_COUNTER is not set
++# CONFIG_PECI is not set
++# CONFIG_HTE is not set
++# end of Device Drivers
++
++#
++# File systems
++#
++# CONFIG_VALIDATE_FS_PARSER is not set
++# CONFIG_EXPORTFS_BLOCK_OPS is not set
++CONFIG_FILE_LOCKING=y
++# CONFIG_FS_ENCRYPTION is not set
++# CONFIG_FS_VERITY is not set
++# CONFIG_DNOTIFY is not set
++# CONFIG_INOTIFY_USER is not set
++# CONFIG_FANOTIFY is not set
++# CONFIG_QUOTA is not set
++# CONFIG_AUTOFS_FS is not set
++# CONFIG_FUSE_FS is not set
++# CONFIG_OVERLAY_FS is not set
++
++#
++# Caches
++#
++# end of Caches
++
++#
++# Pseudo filesystems
++#
++CONFIG_PROC_FS=y
++CONFIG_PROC_SYSCTL=y
++# CONFIG_PROC_CHILDREN is not set
++CONFIG_KERNFS=y
++CONFIG_SYSFS=y
++CONFIG_ARCH_HAS_GIGANTIC_PAGE=y
++# CONFIG_CONFIGFS_FS is not set
++# end of Pseudo filesystems
++
++# CONFIG_MISC_FILESYSTEMS is not set
++# CONFIG_NLS is not set
++# CONFIG_UNICODE is not set
++# end of File systems
++
++#
++# Security options
++#
++# CONFIG_KEYS is not set
++# CONFIG_SECURITY_DMESG_RESTRICT is not set
++# CONFIG_SECURITY is not set
++# CONFIG_SECURITYFS is not set
++# CONFIG_HARDENED_USERCOPY is not set
++# CONFIG_FORTIFY_SOURCE is not set
++# CONFIG_STATIC_USERMODEHELPER is not set
++CONFIG_DEFAULT_SECURITY_DAC=y
++CONFIG_LSM="[]"
++
++#
++# Kernel hardening options
++#
++
++#
++# Memory initialization
++#
++CONFIG_CC_HAS_AUTO_VAR_INIT_PATTERN=y
++CONFIG_CC_HAS_AUTO_VAR_INIT_ZERO_BARE=y
++CONFIG_CC_HAS_AUTO_VAR_INIT_ZERO=y
++CONFIG_INIT_STACK_NONE=y
++# CONFIG_INIT_STACK_ALL_PATTERN is not set
++# CONFIG_INIT_STACK_ALL_ZERO is not set
++# CONFIG_INIT_ON_ALLOC_DEFAULT_ON is not set
++# CONFIG_INIT_ON_FREE_DEFAULT_ON is not set
++CONFIG_CC_HAS_ZERO_CALL_USED_REGS=y
++# CONFIG_ZERO_CALL_USED_REGS is not set
++# end of Memory initialization
++
++#
++# Hardening of kernel data structures
++#
++# CONFIG_LIST_HARDENED is not set
++# CONFIG_BUG_ON_DATA_CORRUPTION is not set
++# end of Hardening of kernel data structures
++
++CONFIG_RANDSTRUCT_NONE=y
++# end of Kernel hardening options
++# end of Security options
++
++# CONFIG_CRYPTO is not set
++
++#
++# Library routines
++#
++# CONFIG_PACKING is not set
++CONFIG_BITREVERSE=y
++CONFIG_GENERIC_STRNCPY_FROM_USER=y
++CONFIG_GENERIC_STRNLEN_USER=y
++# CONFIG_CORDIC is not set
++# CONFIG_PRIME_NUMBERS is not set
++CONFIG_RATIONAL=y
++CONFIG_GENERIC_PCI_IOMAP=y
++
++#
++# Crypto library routines
++#
++CONFIG_CRYPTO_LIB_BLAKE2S_GENERIC=y
++# CONFIG_CRYPTO_LIB_CHACHA is not set
++# CONFIG_CRYPTO_LIB_CURVE25519 is not set
++CONFIG_CRYPTO_LIB_POLY1305_RSIZE=1
++# CONFIG_CRYPTO_LIB_POLY1305 is not set
++# end of Crypto library routines
++
++# CONFIG_CRC_CCITT is not set
++# CONFIG_CRC16 is not set
++# CONFIG_CRC_T10DIF is not set
++# CONFIG_CRC64_ROCKSOFT is not set
++# CONFIG_CRC_ITU_T is not set
++CONFIG_CRC32=y
++# CONFIG_CRC32_SELFTEST is not set
++CONFIG_CRC32_SLICEBY8=y
++# CONFIG_CRC32_SLICEBY4 is not set
++# CONFIG_CRC32_SARWATE is not set
++# CONFIG_CRC32_BIT is not set
++# CONFIG_CRC64 is not set
++# CONFIG_CRC4 is not set
++# CONFIG_CRC7 is not set
++# CONFIG_LIBCRC32C is not set
++# CONFIG_CRC8 is not set
++# CONFIG_RANDOM32_SELFTEST is not set
++# CONFIG_XZ_DEC is not set
++CONFIG_HAS_IOMEM=y
++CONFIG_HAS_IOPORT_MAP=y
++CONFIG_HAS_DMA=y
++CONFIG_DMA_DECLARE_COHERENT=y
++CONFIG_ARCH_DMA_DEFAULT_COHERENT=y
++CONFIG_DMA_NONCOHERENT_MMAP=y
++# CONFIG_DMA_API_DEBUG is not set
++CONFIG_GENERIC_ATOMIC64=y
++# CONFIG_IRQ_POLL is not set
++CONFIG_LIBFDT=y
++CONFIG_ARCH_HAS_PMEM_API=y
++CONFIG_UACCESS_MEMCPY=y
++CONFIG_ARCH_STACKWALK=y
++# CONFIG_LWQ_TEST is not set
++# end of Library routines
++
++CONFIG_GENERIC_LIB_ASHLDI3=y
++CONFIG_GENERIC_LIB_ASHRDI3=y
++CONFIG_GENERIC_LIB_LSHRDI3=y
++CONFIG_GENERIC_LIB_UCMPDI2=y
++CONFIG_GENERIC_LIB_DEVMEM_IS_ALLOWED=y
++
++#
++# Kernel hacking
++#
++
++#
++# printk and dmesg options
++#
++CONFIG_PRINTK_TIME=y
++# CONFIG_PRINTK_CALLER is not set
++# CONFIG_STACKTRACE_BUILD_ID is not set
++CONFIG_CONSOLE_LOGLEVEL_DEFAULT=7
++CONFIG_CONSOLE_LOGLEVEL_QUIET=4
++CONFIG_MESSAGE_LOGLEVEL_DEFAULT=4
++# CONFIG_BOOT_PRINTK_DELAY is not set
++# CONFIG_DYNAMIC_DEBUG is not set
++# CONFIG_DYNAMIC_DEBUG_CORE is not set
++CONFIG_SYMBOLIC_ERRNAME=y
++CONFIG_DEBUG_BUGVERBOSE=y
++# end of printk and dmesg options
++
++CONFIG_DEBUG_KERNEL=y
++# CONFIG_DEBUG_MISC is not set
++
++#
++# Compile-time checks and compiler options
++#
++CONFIG_DEBUG_INFO_NONE=y
++# CONFIG_DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT is not set
++# CONFIG_DEBUG_INFO_DWARF4 is not set
++# CONFIG_DEBUG_INFO_DWARF5 is not set
++CONFIG_FRAME_WARN=2048
++# CONFIG_STRIP_ASM_SYMS is not set
++# CONFIG_READABLE_ASM is not set
++# CONFIG_HEADERS_INSTALL is not set
++# CONFIG_DEBUG_SECTION_MISMATCH is not set
++CONFIG_SECTION_MISMATCH_WARN_ONLY=y
++# CONFIG_DEBUG_FORCE_FUNCTION_ALIGN_64B is not set
++CONFIG_ARCH_WANT_FRAME_POINTERS=y
++CONFIG_FRAME_POINTER=y
++# CONFIG_VMLINUX_MAP is not set
++# CONFIG_DEBUG_FORCE_WEAK_PER_CPU is not set
++# end of Compile-time checks and compiler options
++
++#
++# Generic Kernel Debugging Instruments
++#
++# CONFIG_MAGIC_SYSRQ is not set
++# CONFIG_DEBUG_FS is not set
++CONFIG_HAVE_ARCH_KGDB=y
++CONFIG_HAVE_ARCH_KGDB_QXFER_PKT=y
++# CONFIG_KGDB is not set
++CONFIG_ARCH_HAS_UBSAN_SANITIZE_ALL=y
++# CONFIG_UBSAN is not set
++CONFIG_HAVE_KCSAN_COMPILER=y
++# end of Generic Kernel Debugging Instruments
++
++#
++# Networking Debugging
++#
++# end of Networking Debugging
++
++#
++# Memory Debugging
++#
++# CONFIG_PAGE_EXTENSION is not set
++# CONFIG_DEBUG_PAGEALLOC is not set
++# CONFIG_PAGE_OWNER is not set
++# CONFIG_PAGE_POISONING is not set
++CONFIG_ARCH_HAS_DEBUG_WX=y
++CONFIG_HAVE_DEBUG_KMEMLEAK=y
++# CONFIG_DEBUG_KMEMLEAK is not set
++# CONFIG_DEBUG_OBJECTS is not set
++# CONFIG_DEBUG_STACK_USAGE is not set
++# CONFIG_SCHED_STACK_END_CHECK is not set
++CONFIG_ARCH_HAS_DEBUG_VM_PGTABLE=y
++# CONFIG_DEBUG_VM is not set
++# CONFIG_DEBUG_NOMMU_REGIONS is not set
++# CONFIG_DEBUG_MEMORY_INIT is not set
++CONFIG_CC_HAS_KASAN_GENERIC=y
++CONFIG_CC_HAS_WORKING_NOSANITIZE_ADDRESS=y
++# end of Memory Debugging
++
++# CONFIG_DEBUG_SHIRQ is not set
++
++#
++# Debug Oops, Lockups and Hangs
++#
++# CONFIG_PANIC_ON_OOPS is not set
++CONFIG_PANIC_ON_OOPS_VALUE=0
++CONFIG_PANIC_TIMEOUT=0
++# CONFIG_SOFTLOCKUP_DETECTOR is not set
++# CONFIG_DETECT_HUNG_TASK is not set
++# CONFIG_WQ_WATCHDOG is not set
++# CONFIG_WQ_CPU_INTENSIVE_REPORT is not set
++# end of Debug Oops, Lockups and Hangs
++
++#
++# Scheduler Debugging
++#
++# CONFIG_SCHEDSTATS is not set
++# end of Scheduler Debugging
++
++# CONFIG_DEBUG_TIMEKEEPING is not set
++
++#
++# Lock Debugging (spinlocks, mutexes, etc...)
++#
++CONFIG_LOCK_DEBUGGING_SUPPORT=y
++# CONFIG_PROVE_LOCKING is not set
++# CONFIG_LOCK_STAT is not set
++# CONFIG_DEBUG_RT_MUTEXES is not set
++# CONFIG_DEBUG_SPINLOCK is not set
++# CONFIG_DEBUG_MUTEXES is not set
++# CONFIG_DEBUG_WW_MUTEX_SLOWPATH is not set
++# CONFIG_DEBUG_RWSEMS is not set
++# CONFIG_DEBUG_LOCK_ALLOC is not set
++# CONFIG_DEBUG_ATOMIC_SLEEP is not set
++# CONFIG_DEBUG_LOCKING_API_SELFTESTS is not set
++# CONFIG_LOCK_TORTURE_TEST is not set
++# CONFIG_WW_MUTEX_SELFTEST is not set
++# CONFIG_SCF_TORTURE_TEST is not set
++# end of Lock Debugging (spinlocks, mutexes, etc...)
++
++# CONFIG_DEBUG_IRQFLAGS is not set
++CONFIG_STACKTRACE=y
++# CONFIG_WARN_ALL_UNSEEDED_RANDOM is not set
++# CONFIG_DEBUG_KOBJECT is not set
++
++#
++# Debug kernel data structures
++#
++# CONFIG_DEBUG_LIST is not set
++# CONFIG_DEBUG_PLIST is not set
++# CONFIG_DEBUG_SG is not set
++# CONFIG_DEBUG_NOTIFIERS is not set
++# CONFIG_DEBUG_MAPLE_TREE is not set
++# end of Debug kernel data structures
++
++#
++# RCU Debugging
++#
++# CONFIG_RCU_SCALE_TEST is not set
++# CONFIG_RCU_TORTURE_TEST is not set
++# CONFIG_RCU_REF_SCALE_TEST is not set
++# CONFIG_RCU_TRACE is not set
++# CONFIG_RCU_EQS_DEBUG is not set
++# end of RCU Debugging
++
++# CONFIG_DEBUG_WQ_FORCE_RR_CPU is not set
++# CONFIG_LATENCYTOP is not set
++CONFIG_HAVE_RETHOOK=y
++CONFIG_HAVE_FUNCTION_TRACER=y
++CONFIG_HAVE_FUNCTION_GRAPH_TRACER=y
++CONFIG_HAVE_FUNCTION_GRAPH_RETVAL=y
++CONFIG_HAVE_DYNAMIC_FTRACE_WITH_DIRECT_CALLS=y
++CONFIG_HAVE_FTRACE_MCOUNT_RECORD=y
++CONFIG_HAVE_SYSCALL_TRACEPOINTS=y
++CONFIG_TRACING_SUPPORT=y
++# CONFIG_FTRACE is not set
++# CONFIG_SAMPLES is not set
++CONFIG_HAVE_SAMPLE_FTRACE_DIRECT=y
++CONFIG_HAVE_SAMPLE_FTRACE_DIRECT_MULTI=y
++
++#
++# riscv Debugging
++#
++
++#
++# arch/riscv/kernel Testing and Coverage
++#
++CONFIG_RUNTIME_KERNEL_TESTING_MENU=y
++# end of arch/riscv/kernel Testing and Coverage
++# end of riscv Debugging
++
++#
++# Kernel Testing and Coverage
++#
++# CONFIG_KUNIT is not set
++# CONFIG_NOTIFIER_ERROR_INJECTION is not set
++# CONFIG_FAULT_INJECTION is not set
++CONFIG_ARCH_HAS_KCOV=y
++CONFIG_CC_HAS_SANCOV_TRACE_PC=y
++# CONFIG_KCOV is not set
++# CONFIG_RUNTIME_TESTING_MENU is not set
++CONFIG_ARCH_USE_MEMTEST=y
++CONFIG_CUSTOM_SYSCALLS=y
++# CONFIG_MEMTEST is not set
++# end of Kernel Testing and Coverage
++
++#
++# Rust hacking
++#
++# end of Rust hacking
++# end of Kernel hacking
+diff --git a/package/m4/m4.mk b/package/m4/m4.mk
+index f5e1e27ad8..5a785efcb7 100644
+--- a/package/m4/m4.mk
++++ b/package/m4/m4.mk
+@@ -16,8 +16,8 @@ M4_LICENSE_FILES = COPYING
+ # standard, which is -std=gnu17 only when host gcc is >= 15. This
+ # workaround can be removed when m4 will be updated to a version
+ # including a fix for gcc-15.
+-ifeq ($(BR2_HOST_GCC_AT_LEAST_15),y)
++# ifeq ($(BR2_HOST_GCC_AT_LEAST_15),y)
+ HOST_M4_CONF_ENV = CFLAGS="$(HOST_CFLAGS) -std=gnu17"
+-endif
++# endif
+ 
+ $(eval $(host-autotools-package))
+diff --git a/support/kconfig/lxdialog/check-lxdialog.sh b/support/kconfig/lxdialog/check-lxdialog.sh
+index 16cd9a3186..27d6c30a57 100755
+--- a/support/kconfig/lxdialog/check-lxdialog.sh
++++ b/support/kconfig/lxdialog/check-lxdialog.sh
+@@ -48,7 +48,7 @@ trap "rm -f $tmp" 0 1 2 3 15
+ check() {
+         $cc -x c - -o $tmp 2>/dev/null <<'EOF'
+ #include CURSES_LOC
+-main() {}
++int main() {}
+ EOF
+ 	if [ $? != 0 ]; then
+ 	    echo " *** Unable to find the ncurses libraries or the"       1>&2
+diff --git a/uclibc_config b/uclibc_config
+new file mode 100644
+index 0000000000..bda6efc73b
+--- /dev/null
++++ b/uclibc_config
+@@ -0,0 +1,225 @@
++#
++# Automatically generated file; DO NOT EDIT.
++# uClibc-ng 1.0.44 C Library Configuration
++#
++# TARGET_aarch64 is not set
++# TARGET_alpha is not set
++# TARGET_arc is not set
++# TARGET_arm is not set
++# TARGET_avr32 is not set
++# TARGET_bfin is not set
++# TARGET_c6x is not set
++# TARGET_cris is not set
++# TARGET_csky is not set
++# TARGET_frv is not set
++# TARGET_h8300 is not set
++# TARGET_hppa is not set
++# TARGET_i386 is not set
++# TARGET_ia64 is not set
++# TARGET_kvx is not set
++# TARGET_lm32 is not set
++# TARGET_m68k is not set
++# TARGET_metag is not set
++# TARGET_microblaze is not set
++# TARGET_mips is not set
++# TARGET_nds32 is not set
++# TARGET_nios2 is not set
++# TARGET_or1k is not set
++# TARGET_powerpc is not set
++# TARGET_riscv64 is not set
++TARGET_riscv32=y
++# TARGET_sh is not set
++# TARGET_sparc is not set
++# TARGET_sparc64 is not set
++# TARGET_tile is not set
++# TARGET_x86_64 is not set
++# TARGET_xtensa is not set
++TARGET_LDSO_NAME="ld-uClibc"
++TARGET_ARCH_BITS=32
++
++#
++# Target Architecture Features and Options
++#
++TARGET_ARCH="riscv32"
++FORCE_OPTIONS_FOR_ARCH=y
++TARGET_SUBARCH=""
++UCLIBC_FORMAT_FLAT=y
++# UCLIBC_FORMAT_FLAT_SEP_DATA is not set
++# UCLIBC_FORMAT_SHARED_FLAT is not set
++ARCH_LITTLE_ENDIAN=y
++
++#
++# Using Little Endian
++#
++ARCH_HAS_MMU=y
++# ARCH_USE_MMU is not set
++UCLIBC_HAS_FLOATS=y
++UCLIBC_HAS_FPU=n
++DO_C99_MATH=y
++DO_XSI_MATH=y
++# UCLIBC_HAS_LONG_DOUBLE_MATH is not set
++KERNEL_HEADERS="/home/charlesl/git/mini-rv32ima/buildroot/output/build/linux-headers-6.5.12/usr/include"
++UCLIBC_UCLINUX_BROKEN_MUNMAP=y
++HAVE_DOT_CONFIG=y
++
++#
++# General Library Settings
++#
++DOPIC=y
++ARCH_HAS_NO_SHARED=y
++ARCH_HAS_NO_LDSO=y
++UCLIBC_CTOR_DTOR=y
++HAS_NO_THREADS=y
++UCLIBC_HAS_SYSLOG=y
++UCLIBC_HAS_LFS=y
++MALLOC=y
++# MALLOC_SIMPLE is not set
++UCLIBC_DYNAMIC_ATEXIT=y
++UCLIBC_HAS_UTMPX=y
++UCLIBC_HAS_UTMP=y
++UCLIBC_SUSV2_LEGACY=y
++UCLIBC_SUSV3_LEGACY=y
++# UCLIBC_SUSV3_LEGACY_MACROS is not set
++UCLIBC_SUSV4_LEGACY=y
++# UCLIBC_STRICT_HEADERS is not set
++# UCLIBC_HAS_STUBS is not set
++UCLIBC_HAS_SHADOW=y
++UCLIBC_HAS_PROGRAM_INVOCATION_NAME=y
++UCLIBC_HAS___PROGNAME=y
++UCLIBC_HAS_PTY=y
++ASSUME_DEVPTS=y
++UNIX98PTY_ONLY=y
++UCLIBC_HAS_GETPT=y
++UCLIBC_HAS_LIBUTIL=y
++UCLIBC_HAS_TM_EXTENSIONS=y
++UCLIBC_HAS_TZ_CACHING=y
++UCLIBC_HAS_TZ_FILE=y
++UCLIBC_HAS_TZ_FILE_READ_MANY=y
++UCLIBC_TZ_FILE_PATH="/etc/TZ"
++UCLIBC_FALLBACK_TO_ETC_LOCALTIME=y
++
++#
++# Advanced Library Settings
++#
++UCLIBC_PWD_BUFFER_SIZE=256
++UCLIBC_GRP_BUFFER_SIZE=256
++
++#
++# Support various families of functions
++#
++UCLIBC_LINUX_SPECIFIC=y
++UCLIBC_HAS_GNU_ERROR=y
++UCLIBC_BSD_SPECIFIC=y
++UCLIBC_HAS_BSD_ERR=y
++UCLIBC_HAS_OBSOLETE_BSD_SIGNAL=y
++# UCLIBC_HAS_BSD_B64_NTOP_B64_PTON is not set
++# UCLIBC_HAS_OBSOLETE_SYSV_SIGNAL is not set
++# UCLIBC_NTP_LEGACY is not set
++# UCLIBC_SV4_DEPRECATED is not set
++UCLIBC_HAS_REALTIME=y
++UCLIBC_HAS_ADVANCED_REALTIME=y
++UCLIBC_HAS_EPOLL=y
++UCLIBC_HAS_XATTR=y
++UCLIBC_HAS_PROFILING=y
++UCLIBC_HAS_CRYPT_IMPL=y
++UCLIBC_HAS_SHA256_CRYPT_IMPL=y
++UCLIBC_HAS_SHA512_CRYPT_IMPL=y
++UCLIBC_HAS_CRYPT=y
++UCLIBC_HAS_NETWORK_SUPPORT=y
++UCLIBC_HAS_SOCKET=y
++UCLIBC_HAS_IPV4=y
++UCLIBC_HAS_IPV6=y
++UCLIBC_USE_NETLINK=y
++UCLIBC_SUPPORT_AI_ADDRCONFIG=y
++# UCLIBC_HAS_BSD_RES_CLOSE is not set
++UCLIBC_HAS_COMPAT_RES_STATE=y
++# UCLIBC_HAS_EXTRA_COMPAT_RES_STATE is not set
++UCLIBC_HAS_RESOLVER_SUPPORT=y
++# UCLIBC_DNSRAND_MODE_URANDOM is not set
++# UCLIBC_DNSRAND_MODE_CLOCK is not set
++UCLIBC_DNSRAND_MODE_PRNGPLUS=y
++# UCLIBC_DNSRAND_MODE_SIMPLECOUNTER is not set
++
++#
++# String and Stdio Support
++#
++UCLIBC_HAS_STRING_GENERIC_OPT=y
++UCLIBC_HAS_STRING_ARCH_OPT=y
++UCLIBC_HAS_CTYPE_TABLES=y
++UCLIBC_HAS_CTYPE_SIGNED=y
++# UCLIBC_HAS_CTYPE_UNSAFE is not set
++UCLIBC_HAS_CTYPE_CHECKED=y
++# UCLIBC_HAS_CTYPE_ENFORCED is not set
++# UCLIBC_HAS_WCHAR is not set
++# UCLIBC_HAS_LIBICONV is not set
++UCLIBC_HAS_LIBINTL=y
++# UCLIBC_HAS_LOCALE is not set
++UCLIBC_HAS_HEXADECIMAL_FLOATS=y
++UCLIBC_HAS_GLIBC_CUSTOM_PRINTF=y
++# USE_OLD_VFPRINTF is not set
++UCLIBC_PRINTF_SCANF_POSITIONAL_ARGS=9
++# UCLIBC_HAS_STDIO_BUFSIZ_NONE is not set
++# UCLIBC_HAS_STDIO_BUFSIZ_256 is not set
++# UCLIBC_HAS_STDIO_BUFSIZ_512 is not set
++# UCLIBC_HAS_STDIO_BUFSIZ_1024 is not set
++# UCLIBC_HAS_STDIO_BUFSIZ_2048 is not set
++UCLIBC_HAS_STDIO_BUFSIZ_4096=y
++# UCLIBC_HAS_STDIO_BUFSIZ_8192 is not set
++UCLIBC_HAS_STDIO_BUILTIN_BUFFER_NONE=y
++# UCLIBC_HAS_STDIO_BUILTIN_BUFFER_4 is not set
++# UCLIBC_HAS_STDIO_BUILTIN_BUFFER_8 is not set
++# UCLIBC_HAS_STDIO_SHUTDOWN_ON_ABORT is not set
++UCLIBC_HAS_STDIO_GETC_MACRO=y
++UCLIBC_HAS_STDIO_PUTC_MACRO=y
++UCLIBC_HAS_STDIO_AUTO_RW_TRANSITION=y
++# UCLIBC_HAS_FOPEN_LARGEFILE_MODE is not set
++UCLIBC_HAS_FOPEN_EXCLUSIVE_MODE=y
++# UCLIBC_HAS_FOPEN_CLOSEEXEC_MODE is not set
++UCLIBC_HAS_GLIBC_CUSTOM_STREAMS=y
++UCLIBC_HAS_PRINTF_M_SPEC=y
++UCLIBC_HAS_ERRNO_MESSAGES=y
++# UCLIBC_HAS_SYS_ERRLIST is not set
++UCLIBC_HAS_SIGNUM_MESSAGES=y
++# UCLIBC_HAS_SYS_SIGLIST is not set
++UCLIBC_HAS_GNU_GETOPT=y
++UCLIBC_HAS_GETOPT_LONG=y
++UCLIBC_HAS_GNU_GETSUBOPT=y
++# UCLIBC_HAS_ARGP is not set
++
++#
++# Big and Tall
++#
++UCLIBC_HAS_REGEX=y
++UCLIBC_HAS_FNMATCH=y
++UCLIBC_HAS_WORDEXP=y
++UCLIBC_HAS_NFTW=y
++UCLIBC_HAS_FTW=y
++# UCLIBC_HAS_FTS is not set
++UCLIBC_HAS_GLOB=y
++UCLIBC_HAS_GNU_GLOB=y
++
++#
++# Library Installation Options
++#
++RUNTIME_PREFIX="/"
++DEVEL_PREFIX="/usr"
++MULTILIB_DIR="lib"
++HARDWIRED_ABSPATH=y
++
++#
++# Security options
++#
++# UCLIBC_HAS_SSP is not set
++UCLIBC_BUILD_NOEXECSTACK=y
++
++#
++# Development/debugging options
++#
++CROSS_COMPILER_PREFIX="/home/charlesl/git/mini-rv32ima/buildroot/output/host/bin/riscv32-buildroot-linux-uclibc-"
++UCLIBC_EXTRA_CFLAGS=""
++# DODEBUG is not set
++# DOSTRIP is not set
++# DOASSERTS is not set
++# UCLIBC_MALLOC_DEBUGGING is not set
++WARNINGS="-Wall"
++# EXTRA_WARNINGS is not set
+diff --git a/uclibc_config_extra b/uclibc_config_extra
+new file mode 100644
+index 0000000000..bda6efc73b
+--- /dev/null
++++ b/uclibc_config_extra
+@@ -0,0 +1,225 @@
++#
++# Automatically generated file; DO NOT EDIT.
++# uClibc-ng 1.0.44 C Library Configuration
++#
++# TARGET_aarch64 is not set
++# TARGET_alpha is not set
++# TARGET_arc is not set
++# TARGET_arm is not set
++# TARGET_avr32 is not set
++# TARGET_bfin is not set
++# TARGET_c6x is not set
++# TARGET_cris is not set
++# TARGET_csky is not set
++# TARGET_frv is not set
++# TARGET_h8300 is not set
++# TARGET_hppa is not set
++# TARGET_i386 is not set
++# TARGET_ia64 is not set
++# TARGET_kvx is not set
++# TARGET_lm32 is not set
++# TARGET_m68k is not set
++# TARGET_metag is not set
++# TARGET_microblaze is not set
++# TARGET_mips is not set
++# TARGET_nds32 is not set
++# TARGET_nios2 is not set
++# TARGET_or1k is not set
++# TARGET_powerpc is not set
++# TARGET_riscv64 is not set
++TARGET_riscv32=y
++# TARGET_sh is not set
++# TARGET_sparc is not set
++# TARGET_sparc64 is not set
++# TARGET_tile is not set
++# TARGET_x86_64 is not set
++# TARGET_xtensa is not set
++TARGET_LDSO_NAME="ld-uClibc"
++TARGET_ARCH_BITS=32
++
++#
++# Target Architecture Features and Options
++#
++TARGET_ARCH="riscv32"
++FORCE_OPTIONS_FOR_ARCH=y
++TARGET_SUBARCH=""
++UCLIBC_FORMAT_FLAT=y
++# UCLIBC_FORMAT_FLAT_SEP_DATA is not set
++# UCLIBC_FORMAT_SHARED_FLAT is not set
++ARCH_LITTLE_ENDIAN=y
++
++#
++# Using Little Endian
++#
++ARCH_HAS_MMU=y
++# ARCH_USE_MMU is not set
++UCLIBC_HAS_FLOATS=y
++UCLIBC_HAS_FPU=n
++DO_C99_MATH=y
++DO_XSI_MATH=y
++# UCLIBC_HAS_LONG_DOUBLE_MATH is not set
++KERNEL_HEADERS="/home/charlesl/git/mini-rv32ima/buildroot/output/build/linux-headers-6.5.12/usr/include"
++UCLIBC_UCLINUX_BROKEN_MUNMAP=y
++HAVE_DOT_CONFIG=y
++
++#
++# General Library Settings
++#
++DOPIC=y
++ARCH_HAS_NO_SHARED=y
++ARCH_HAS_NO_LDSO=y
++UCLIBC_CTOR_DTOR=y
++HAS_NO_THREADS=y
++UCLIBC_HAS_SYSLOG=y
++UCLIBC_HAS_LFS=y
++MALLOC=y
++# MALLOC_SIMPLE is not set
++UCLIBC_DYNAMIC_ATEXIT=y
++UCLIBC_HAS_UTMPX=y
++UCLIBC_HAS_UTMP=y
++UCLIBC_SUSV2_LEGACY=y
++UCLIBC_SUSV3_LEGACY=y
++# UCLIBC_SUSV3_LEGACY_MACROS is not set
++UCLIBC_SUSV4_LEGACY=y
++# UCLIBC_STRICT_HEADERS is not set
++# UCLIBC_HAS_STUBS is not set
++UCLIBC_HAS_SHADOW=y
++UCLIBC_HAS_PROGRAM_INVOCATION_NAME=y
++UCLIBC_HAS___PROGNAME=y
++UCLIBC_HAS_PTY=y
++ASSUME_DEVPTS=y
++UNIX98PTY_ONLY=y
++UCLIBC_HAS_GETPT=y
++UCLIBC_HAS_LIBUTIL=y
++UCLIBC_HAS_TM_EXTENSIONS=y
++UCLIBC_HAS_TZ_CACHING=y
++UCLIBC_HAS_TZ_FILE=y
++UCLIBC_HAS_TZ_FILE_READ_MANY=y
++UCLIBC_TZ_FILE_PATH="/etc/TZ"
++UCLIBC_FALLBACK_TO_ETC_LOCALTIME=y
++
++#
++# Advanced Library Settings
++#
++UCLIBC_PWD_BUFFER_SIZE=256
++UCLIBC_GRP_BUFFER_SIZE=256
++
++#
++# Support various families of functions
++#
++UCLIBC_LINUX_SPECIFIC=y
++UCLIBC_HAS_GNU_ERROR=y
++UCLIBC_BSD_SPECIFIC=y
++UCLIBC_HAS_BSD_ERR=y
++UCLIBC_HAS_OBSOLETE_BSD_SIGNAL=y
++# UCLIBC_HAS_BSD_B64_NTOP_B64_PTON is not set
++# UCLIBC_HAS_OBSOLETE_SYSV_SIGNAL is not set
++# UCLIBC_NTP_LEGACY is not set
++# UCLIBC_SV4_DEPRECATED is not set
++UCLIBC_HAS_REALTIME=y
++UCLIBC_HAS_ADVANCED_REALTIME=y
++UCLIBC_HAS_EPOLL=y
++UCLIBC_HAS_XATTR=y
++UCLIBC_HAS_PROFILING=y
++UCLIBC_HAS_CRYPT_IMPL=y
++UCLIBC_HAS_SHA256_CRYPT_IMPL=y
++UCLIBC_HAS_SHA512_CRYPT_IMPL=y
++UCLIBC_HAS_CRYPT=y
++UCLIBC_HAS_NETWORK_SUPPORT=y
++UCLIBC_HAS_SOCKET=y
++UCLIBC_HAS_IPV4=y
++UCLIBC_HAS_IPV6=y
++UCLIBC_USE_NETLINK=y
++UCLIBC_SUPPORT_AI_ADDRCONFIG=y
++# UCLIBC_HAS_BSD_RES_CLOSE is not set
++UCLIBC_HAS_COMPAT_RES_STATE=y
++# UCLIBC_HAS_EXTRA_COMPAT_RES_STATE is not set
++UCLIBC_HAS_RESOLVER_SUPPORT=y
++# UCLIBC_DNSRAND_MODE_URANDOM is not set
++# UCLIBC_DNSRAND_MODE_CLOCK is not set
++UCLIBC_DNSRAND_MODE_PRNGPLUS=y
++# UCLIBC_DNSRAND_MODE_SIMPLECOUNTER is not set
++
++#
++# String and Stdio Support
++#
++UCLIBC_HAS_STRING_GENERIC_OPT=y
++UCLIBC_HAS_STRING_ARCH_OPT=y
++UCLIBC_HAS_CTYPE_TABLES=y
++UCLIBC_HAS_CTYPE_SIGNED=y
++# UCLIBC_HAS_CTYPE_UNSAFE is not set
++UCLIBC_HAS_CTYPE_CHECKED=y
++# UCLIBC_HAS_CTYPE_ENFORCED is not set
++# UCLIBC_HAS_WCHAR is not set
++# UCLIBC_HAS_LIBICONV is not set
++UCLIBC_HAS_LIBINTL=y
++# UCLIBC_HAS_LOCALE is not set
++UCLIBC_HAS_HEXADECIMAL_FLOATS=y
++UCLIBC_HAS_GLIBC_CUSTOM_PRINTF=y
++# USE_OLD_VFPRINTF is not set
++UCLIBC_PRINTF_SCANF_POSITIONAL_ARGS=9
++# UCLIBC_HAS_STDIO_BUFSIZ_NONE is not set
++# UCLIBC_HAS_STDIO_BUFSIZ_256 is not set
++# UCLIBC_HAS_STDIO_BUFSIZ_512 is not set
++# UCLIBC_HAS_STDIO_BUFSIZ_1024 is not set
++# UCLIBC_HAS_STDIO_BUFSIZ_2048 is not set
++UCLIBC_HAS_STDIO_BUFSIZ_4096=y
++# UCLIBC_HAS_STDIO_BUFSIZ_8192 is not set
++UCLIBC_HAS_STDIO_BUILTIN_BUFFER_NONE=y
++# UCLIBC_HAS_STDIO_BUILTIN_BUFFER_4 is not set
++# UCLIBC_HAS_STDIO_BUILTIN_BUFFER_8 is not set
++# UCLIBC_HAS_STDIO_SHUTDOWN_ON_ABORT is not set
++UCLIBC_HAS_STDIO_GETC_MACRO=y
++UCLIBC_HAS_STDIO_PUTC_MACRO=y
++UCLIBC_HAS_STDIO_AUTO_RW_TRANSITION=y
++# UCLIBC_HAS_FOPEN_LARGEFILE_MODE is not set
++UCLIBC_HAS_FOPEN_EXCLUSIVE_MODE=y
++# UCLIBC_HAS_FOPEN_CLOSEEXEC_MODE is not set
++UCLIBC_HAS_GLIBC_CUSTOM_STREAMS=y
++UCLIBC_HAS_PRINTF_M_SPEC=y
++UCLIBC_HAS_ERRNO_MESSAGES=y
++# UCLIBC_HAS_SYS_ERRLIST is not set
++UCLIBC_HAS_SIGNUM_MESSAGES=y
++# UCLIBC_HAS_SYS_SIGLIST is not set
++UCLIBC_HAS_GNU_GETOPT=y
++UCLIBC_HAS_GETOPT_LONG=y
++UCLIBC_HAS_GNU_GETSUBOPT=y
++# UCLIBC_HAS_ARGP is not set
++
++#
++# Big and Tall
++#
++UCLIBC_HAS_REGEX=y
++UCLIBC_HAS_FNMATCH=y
++UCLIBC_HAS_WORDEXP=y
++UCLIBC_HAS_NFTW=y
++UCLIBC_HAS_FTW=y
++# UCLIBC_HAS_FTS is not set
++UCLIBC_HAS_GLOB=y
++UCLIBC_HAS_GNU_GLOB=y
++
++#
++# Library Installation Options
++#
++RUNTIME_PREFIX="/"
++DEVEL_PREFIX="/usr"
++MULTILIB_DIR="lib"
++HARDWIRED_ABSPATH=y
++
++#
++# Security options
++#
++# UCLIBC_HAS_SSP is not set
++UCLIBC_BUILD_NOEXECSTACK=y
++
++#
++# Development/debugging options
++#
++CROSS_COMPILER_PREFIX="/home/charlesl/git/mini-rv32ima/buildroot/output/host/bin/riscv32-buildroot-linux-uclibc-"
++UCLIBC_EXTRA_CFLAGS=""
++# DODEBUG is not set
++# DOSTRIP is not set
++# DOASSERTS is not set
++# UCLIBC_MALLOC_DEBUGGING is not set
++WARNINGS="-Wall"
++# EXTRA_WARNINGS is not set

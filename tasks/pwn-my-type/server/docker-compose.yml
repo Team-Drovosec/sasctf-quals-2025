@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+
+  my-type:
+    build: .
+    ports:
+        - 2640:2640
+    read_only: true
+    restart: on-failure
+    deploy:
+      resources:
+        limits:
+          cpus:   1
+          memory: 128M
+        reservations:
+          cpus:   0.5
+          memory: 64M

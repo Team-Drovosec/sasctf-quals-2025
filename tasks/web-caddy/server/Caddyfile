@@ -1,0 +1,26 @@
+:80 {
+	@stripHostPort path_regexp stripHostPort ^\/([^\/]+?)(?::(\d+))?(\/.*)?$
+
+	map {http.regexp.stripHostPort.2} {targetPort} {
+		"" 80
+		default {http.regexp.stripHostPort.2}
+	}
+
+	map {http.regexp.stripHostPort.3} {targetPath} {
+		"" /
+		default {http.regexp.stripHostPort.3}
+	}
+
+	handle @stripHostPort {
+		rewrite {targetPath}
+
+		reverse_proxy {http.regexp.stripHostPort.1}:{targetPort} {
+			header_up Host {http.regexp.stripHostPort.1}:{targetPort}
+		}
+	}
+
+	handle {
+		root * ./
+		file_server
+	}
+}

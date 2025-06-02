@@ -1,0 +1,5 @@
+services:
+  sahur:
+    build: .
+    ports:
+      - "7331:7331"

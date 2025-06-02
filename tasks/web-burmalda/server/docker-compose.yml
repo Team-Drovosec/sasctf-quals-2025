@@ -1,0 +1,23 @@
+services:
+  burmalda-backend:
+    build: .
+    ports:
+      - 127.0.0.1:4100:8000
+    restart: always
+    env_file:
+      - app/.env
+    depends_on:
+      burmalda-db:
+        condition: service_healthy
+
+
+  burmalda-db:
+    image: postgres:15
+    env_file:
+      - app/.env
+    restart: on-failure
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5

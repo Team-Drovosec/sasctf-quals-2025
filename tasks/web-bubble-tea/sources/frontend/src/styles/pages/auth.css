@@ -1,0 +1,48 @@
+.auth-container {
+  max-width: 400px;
+  margin: 80px auto;
+  padding: var(--spacing-xl);
+  background-color: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+}
+
+.auth-container h2 {
+  text-align: center;
+  margin-bottom: 25px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.auth-logo {
+  text-align: center;
+  margin-bottom: var(--spacing-xl);
+  font-size: var(--font-size-logo);
+  font-weight: bold;
+  color: var(--text-primary);
+}
+
+.auth-logo span {
+  color: var(--primary-color);
+}
+
+.auth-toggle {
+  text-align: center;
+  margin-top: var(--spacing-lg);
+  color: var(--text-secondary);
+}
+
+.auth-toggle button {
+  background: none;
+  border: none;
+  color: var(--primary-color);
+  font-weight: 500;
+  cursor: pointer;
+  padding: var(--spacing-xs);
+  transition: color var(--transition-base);
+}
+
+.auth-toggle button:hover {
+  color: var(--primary-hover);
+  text-decoration: underline;
+}

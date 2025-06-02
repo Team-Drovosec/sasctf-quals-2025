@@ -1,0 +1,9 @@
+services:
+  secrets-nginx:
+    image: nginx:1.27.4
+    restart: unless-stopped
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./secret.html:/var/www/secret/secret.html
+    ports:
+      - 5401:80

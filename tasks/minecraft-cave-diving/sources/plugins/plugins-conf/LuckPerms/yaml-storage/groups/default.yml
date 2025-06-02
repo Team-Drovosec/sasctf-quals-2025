@@ -1,0 +1,7 @@
+name: default
+permissions:
+  - plots.auto
+  - plots.plot.1
+  - plots.use
+parents:
+  - no-perms

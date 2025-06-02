@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+
+@layer components {
+    .form-transition {
+        @apply transition-all duration-300 ease-in-out;
+    }
+}
+  
+  

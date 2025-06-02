@@ -1,0 +1,6 @@
+services:
+  task-washing-machine:
+    build: .
+    restart: always
+    ports:
+        - "127.0.0.1:25045:80"

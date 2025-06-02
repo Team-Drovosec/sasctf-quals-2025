@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GigaUpload - Upload File</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="form-container">
+            <h1>Upload File</h1>
+            <div id="uploadMessage" class="message"></div>
+            <form id="uploadForm">
+                <div class="form-group">
+                    <input type="hidden" name="upload_token" value="<%= uploadToken %>">
+                    <label for="file">Select File</label>
+                    <input type="file" id="file" name="upload" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Upload</button>
+            </form>
+            <div class="button-group" style="margin-top: 20px;">
+                <a href="/" class="btn btn-secondary">Back to Home</a>
+            </div>
+        </div>
+    </div>
+    <script src="/js/main.js"></script>
+</body>
+</html> 

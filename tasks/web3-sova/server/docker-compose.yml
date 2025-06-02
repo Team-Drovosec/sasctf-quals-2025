@@ -1,0 +1,22 @@
+services:
+  anvil: # this is a proxy
+    build: ./anvil
+    ports:
+      - "8545:8545"
+    depends_on:
+      - anvil-backend
+
+  anvil-backend: # this is original anvil
+    build: ./anvil_backend
+
+  app:
+    build:
+      context: ./app
+      args:
+        TARGET_KEY: "Qy=*}OV("
+    ports:
+      - "5000:5000"
+    environment:
+      - FLAG=SAS{h00t_h00t_7h1s_6uy_w1ll_c0v3r_th3_c0st5_9f03fd}
+    depends_on:
+      - anvil

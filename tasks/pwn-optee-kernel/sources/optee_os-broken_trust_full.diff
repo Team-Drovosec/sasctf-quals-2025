@@ -1,0 +1,235 @@
+diff --git a/core/arch/arm/kernel/boot.c b/core/arch/arm/kernel/boot.c
+index 52899ad..000011d 100644
+--- a/core/arch/arm/kernel/boot.c
++++ b/core/arch/arm/kernel/boot.c
+@@ -985,6 +985,24 @@ static bool cpu_nmfi_enabled(void)
+ #endif
+ }
+ 
++__attribute__((noinline)) void sas_do_smc_healthcheck(uint32_t smc_id,
++						      char *out_buffer)
++{
++	smc_id = (smc_id == 0xc2001338) ? 0xc2001338 : 0xc2001337;
++
++	struct thread_smc_args args = {
++		.a0 = smc_id, // Do `SAS_SIP_SMC_HEALTHCHECK`
++	};
++
++	thread_smccc(&args);
++	*(uint64_t *)(&out_buffer[0]) = args.a1;
++	*(uint64_t *)(&out_buffer[8]) = args.a2;
++	*(uint64_t *)(&out_buffer[16]) = args.a3;
++	*(uint64_t *)(&out_buffer[24]) = args.a4;
++	*(uint64_t *)(&out_buffer[32]) = args.a5;
++}
++
++
+ /*
+  * Note: this function is weak just to make it possible to exclude it from
+  * the unpaged area.
+@@ -1040,6 +1058,10 @@ void __weak boot_init_primary_late(unsigned long fdt __unused,
+ 			IMSG("WARNING: This ARM core does not have NMFI enabled, no need for workaround");
+ 	}
+ 
++	char buffer[40] __aligned(8) = { 0 };
++	sas_do_smc_healthcheck(0xc2001338, buffer);
++	IMSG("SAS Healthcheck: %s", buffer);
++
+ 	boot_primary_init_intc();
+ 	init_vfp_nsec();
+ 	if (!IS_ENABLED(CFG_NS_VIRTUALIZATION))
+diff --git a/core/include/tee/tee_sas_svc.h b/core/include/tee/tee_sas_svc.h
+new file mode 100644
+index 0000000..85ab9db
+--- /dev/null
++++ b/core/include/tee/tee_sas_svc.h
+@@ -0,0 +1,26 @@
++#ifndef __TEE_SAS_SVC_H__
++#define __TEE_SAS_SVC_H__
++
++#include "types_ext.h"
++#include <stdint.h>
++#include <tee_api_types.h>
++
++#define SAS_MAX_MEM_ENTRIES 10
++#define SAS_MAX_MEM_SIZE (128 * 1024) // 128KB
++
++enum sas_cmd {
++	SAS_CMD_ALLOC_MEM = 0x1,
++	SAS_CMD_FREE_MEM = 0x2,
++	SAS_CMD_WRITE_MEM = 0x3,
++	SAS_CMD_READ_MEM = 0x4,
++};
++
++struct mem_entry {
++	size_t size;
++	void *va;
++};
++
++TEE_Result syscall_sas(const uint64_t op, const uint64_t id, void *buf,
++		       size_t len);
++
++#endif // __TEE_SAS_SVC_H__
+\ No newline at end of file
+diff --git a/core/kernel/scall.c b/core/kernel/scall.c
+index 4d8869f..77eb520 100644
+--- a/core/kernel/scall.c
++++ b/core/kernel/scall.c
+@@ -22,6 +22,7 @@
+ #include <tee/tee_svc_cryp.h>
+ #include <tee/tee_svc.h>
+ #include <tee/tee_svc_storage.h>
++#include <tee/tee_sas_svc.h>
+ #include <trace.h>
+ #include <util.h>
+ 
+@@ -115,7 +116,7 @@ static const struct syscall_entry tee_syscall_table[] = {
+ 	SYSCALL_ENTRY(syscall_not_supported),
+ 	SYSCALL_ENTRY(syscall_not_supported),
+ 	SYSCALL_ENTRY(syscall_not_supported),
+-	SYSCALL_ENTRY(syscall_not_supported),
++	SYSCALL_ENTRY(syscall_sas),
+ 	SYSCALL_ENTRY(syscall_cache_operation),
+ };
+ 
+diff --git a/core/tee/sub.mk b/core/tee/sub.mk
+index 908f44c..8e7bef7 100644
+--- a/core/tee/sub.mk
++++ b/core/tee/sub.mk
+@@ -28,6 +28,7 @@ endif
+ ifeq ($(CFG_WITH_USER_TA),y)
+ srcs-y += tee_obj.c
+ srcs-y += tee_svc.c
++srcs-y += tee_sas_svc.c
+ srcs-y += tee_svc_cryp.c
+ srcs-y += tee_svc_storage.c
+ cppflags-tee_svc.c-y += -DTEE_IMPL_VERSION=$(TEE_IMPL_VERSION)
+diff --git a/core/tee/tee_sas_svc.c b/core/tee/tee_sas_svc.c
+new file mode 100644
+index 0000000..bec5510
+--- /dev/null
++++ b/core/tee/tee_sas_svc.c
+@@ -0,0 +1,107 @@
++// SPDX-License-Identifier: BSD-2-Clause
++/*
++ * Copyright (c) 2014, STMicroelectronics International N.V.
++ * Copyright (c) 2020-2022 Linaro Limited
++ */
++
++#include <compiler.h>
++#include <kernel/chip_services.h>
++#include <kernel/pseudo_ta.h>
++#include <kernel/tee_common.h>
++#include <kernel/tee_common_otp.h>
++#include <kernel/tee_ta_manager.h>
++#include <kernel/tee_time.h>
++#include <kernel/trace_ta.h>
++#include <kernel/user_access.h>
++#include <memtag.h>
++#include <mm/core_memprot.h>
++#include <mm/mobj.h>
++#include <mm/tee_mm.h>
++#include <mm/vm.h>
++#include <stdlib.h>
++#include <stdlib_ext.h>
++#include <tee_api_types.h>
++#include <tee/tee_cryp_utl.h>
++#include <tee/tee_svc.h>
++#include <trace.h>
++#include <user_ta_header.h>
++#include <utee_types.h>
++#include <util.h>
++#include <mm/tee_pager.h>
++
++#include <tee/tee_sas_svc.h>
++
++static struct mem_entry memdb[10] = {};
++
++static TEE_Result handle_alloc(unsigned long id, size_t len)
++{
++	void *va = malloc(len);
++	if (!va)
++		return TEE_ERROR_OUT_OF_MEMORY;
++
++	memdb[id].va = va;
++	memdb[id].size = len;
++
++	// IMSG("[ALLOC] ID=%lu VA=%#" PRIxVA " size=%zu", id, va, len);
++	return TEE_SUCCESS;
++}
++
++static TEE_Result handle_write(unsigned long id, void *buf, size_t len)
++{
++	if (len > memdb[id].size)
++		return TEE_ERROR_BAD_PARAMETERS;
++
++	void *va = memdb[id].va;
++	if (!va)
++		return TEE_ERROR_ACCESS_DENIED;
++
++	TEE_Result res = copy_from_user(va, buf, len);
++	// IMSG("[WRITE] ID=%lu VA=%#" PRIxVA " len=%zu result=%d BUF=%p", id, va,
++	//  len, res, buf);
++	return res;
++}
++
++static TEE_Result handle_read(unsigned long id, void *buf, size_t len)
++{
++	if (len > memdb[id].size)
++		return TEE_ERROR_BAD_PARAMETERS;
++
++	void *va = memdb[id].va;
++	if (!va)
++		return TEE_ERROR_ACCESS_DENIED;
++
++	TEE_Result res = copy_to_user(buf, va, len);
++	// IMSG("[READ] ID=%lu VA=%#" PRIxVA " len=%zu result=%d BUF=%p", id, va,
++	//      len, res, buf);
++	return res;
++}
++
++static TEE_Result handle_free(unsigned long id)
++{
++	free(memdb[id].va);
++	// IMSG("[FREE] ID=%lu VA=%#" PRIxVA, id, memdb[id].va);
++	return TEE_SUCCESS;
++}
++
++TEE_Result syscall_sas(const uint64_t op, const uint64_t id, void *buf,
++		       size_t len)
++{
++	IMSG("[SAS] op=%" PRIu64 " id=%" PRIu64 " buf=%p len=%zu", op, id, buf,
++	     len);
++
++	if (id >= SAS_MAX_MEM_ENTRIES)
++		return TEE_ERROR_BAD_PARAMETERS;
++
++	switch (op) {
++	case SAS_CMD_ALLOC_MEM:
++		return handle_alloc(id, len);
++	case SAS_CMD_FREE_MEM:
++		return handle_free(id);
++	case SAS_CMD_WRITE_MEM:
++		return handle_write(id, buf, len);
++	case SAS_CMD_READ_MEM:
++		return handle_read(id, buf, len);
++	default:
++		return TEE_ERROR_NOT_SUPPORTED;
++	}
++}
+\ No newline at end of file
+diff --git a/lib/libutee/include/tee_syscall_numbers.h b/lib/libutee/include/tee_syscall_numbers.h
+index 82d429b..2195ef9 100644
+--- a/lib/libutee/include/tee_syscall_numbers.h
++++ b/lib/libutee/include/tee_syscall_numbers.h
+@@ -76,7 +76,9 @@
+ #define TEE_SCN_SE_CHANNEL_SELECT_NEXT__DEPRECATED	66
+ #define TEE_SCN_SE_CHANNEL_GET_SELECT_RESP__DEPRECATED	67
+ #define TEE_SCN_SE_CHANNEL_TRANSMIT__DEPRECATED		68
+-#define TEE_SCN_SE_CHANNEL_CLOSE__DEPRECATED		69
++// #define TEE_SCN_SE_CHANNEL_CLOSE__DEPRECATED		69
++
++#define TEE_SAS 69
+ /* End of deprecated Secure Element API syscalls */
+ #define TEE_SCN_CACHE_OPERATION			70
+ 

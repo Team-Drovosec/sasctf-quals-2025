@@ -1,0 +1,5 @@
+flask
+web3
+capstone
+pyelftools
+gunicorn

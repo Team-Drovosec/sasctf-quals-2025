@@ -1,0 +1,278 @@
+diff --git a/trust_issues/Android.mk b/trust_issues/Android.mk
+new file mode 100644
+index 0000000..ff2a2aa
+--- /dev/null
++++ b/trust_issues/Android.mk
+@@ -0,0 +1,19 @@
++###################### optee-hello-world ######################
++LOCAL_PATH := $(call my-dir)
++
++include $(CLEAR_VARS)
++LOCAL_CFLAGS += -DANDROID_BUILD
++LOCAL_CFLAGS += -Wall
++
++LOCAL_SRC_FILES += host/main.c
++
++LOCAL_C_INCLUDES := $(LOCAL_PATH)/ta/include
++
++LOCAL_SHARED_LIBRARIES := libteec
++LOCAL_MODULE := sas_trust_issues
++LOCAL_VENDOR_MODULE := true
++LOCAL_MODULE_TAGS := optional
++
++include $(BUILD_EXECUTABLE)
++
++include $(LOCAL_PATH)/ta/Android.mk
+diff --git a/trust_issues/CMakeLists.txt b/trust_issues/CMakeLists.txt
+new file mode 100644
+index 0000000..03f62a0
+--- /dev/null
++++ b/trust_issues/CMakeLists.txt
+@@ -0,0 +1,13 @@
++project(sas_trust_issues C)
++
++set(SRC host/main.c)
++
++add_executable(${PROJECT_NAME} ${SRC})
++
++target_include_directories(${PROJECT_NAME}
++	PRIVATE ta/include
++	PRIVATE include)
++
++target_link_libraries(${PROJECT_NAME} PRIVATE teec)
++
++install(TARGETS ${PROJECT_NAME} DESTINATION ${CMAKE_INSTALL_BINDIR})
+diff --git a/trust_issues/Makefile b/trust_issues/Makefile
+new file mode 100644
+index 0000000..b188683
+--- /dev/null
++++ b/trust_issues/Makefile
+@@ -0,0 +1,15 @@
++export V?=0
++
++# If _HOST or _TA specific compilers are not specified, then use CROSS_COMPILE
++HOST_CROSS_COMPILE ?= $(CROSS_COMPILE)
++TA_CROSS_COMPILE ?= $(CROSS_COMPILE)
++
++.PHONY: all
++all:
++	$(MAKE) -C host CROSS_COMPILE="$(HOST_CROSS_COMPILE)" --no-builtin-variables
++	$(MAKE) -C ta CROSS_COMPILE="$(TA_CROSS_COMPILE)" LDFLAGS=""
++
++.PHONY: clean
++clean:
++	$(MAKE) -C host clean
++	$(MAKE) -C ta clean
+diff --git a/trust_issues/host/Makefile b/trust_issues/host/Makefile
+new file mode 100644
+index 0000000..79ebafe
+--- /dev/null
++++ b/trust_issues/host/Makefile
+@@ -0,0 +1,28 @@
++CC      ?= $(CROSS_COMPILE)gcc
++LD      ?= $(CROSS_COMPILE)ld
++AR      ?= $(CROSS_COMPILE)ar
++NM      ?= $(CROSS_COMPILE)nm
++OBJCOPY ?= $(CROSS_COMPILE)objcopy
++OBJDUMP ?= $(CROSS_COMPILE)objdump
++READELF ?= $(CROSS_COMPILE)readelf
++
++OBJS = main.o
++
++CFLAGS += -Wall -I../ta/include -I$(TEEC_EXPORT)/include -I./include
++#Add/link other required libraries here
++LDADD += -lteec -L$(TEEC_EXPORT)/lib
++
++BINARY = sas_ta_exploitation_exploit
++
++.PHONY: all
++all: $(BINARY)
++
++$(BINARY): $(OBJS)
++	$(CC) $(LDFLAGS) -o $@ $< $(LDADD)
++
++.PHONY: clean
++clean:
++	rm -f $(OBJS) $(BINARY)
++
++%.o: %.c
++	$(CC) $(CFLAGS) -c $< -o $@
+diff --git a/trust_issues/host/main.c b/trust_issues/host/main.c
+new file mode 100644
+index 0000000..92089ad
+--- /dev/null
++++ b/trust_issues/host/main.c
+@@ -0,0 +1,14 @@
++#include <ctype.h>
++#include <err.h>
++#include <stdint.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++
++/* OP-TEE TEE client API (built by optee_client) */
++#include <tee_client_api.h>
++
++/* For the UUID (found in the TA's h-file(s)) */
++#include <trust_issues_ta.h>
++
++int main(int argc, char *argv[]) { return 0; }
+diff --git a/trust_issues/ta/Android.mk b/trust_issues/ta/Android.mk
+new file mode 100644
+index 0000000..df4bb7b
+--- /dev/null
++++ b/trust_issues/ta/Android.mk
+@@ -0,0 +1,4 @@
++LOCAL_PATH := $(call my-dir)
++
++local_module := 41414141-7472-7573-745f-697373756573.ta
++include $(BUILD_OPTEE_MK)
+diff --git a/trust_issues/ta/Makefile b/trust_issues/ta/Makefile
+new file mode 100644
+index 0000000..a2fa0c5
+--- /dev/null
++++ b/trust_issues/ta/Makefile
+@@ -0,0 +1,13 @@
++CFG_TEE_TA_LOG_LEVEL ?= 4
++CFG_TA_OPTEE_CORE_API_COMPAT_1_1=y
++
++# The UUID for the Trusted Application
++BINARY=41414141-7472-7573-745f-697373756573
++
++-include $(TA_DEV_KIT_DIR)/mk/ta_dev_kit.mk
++
++ifeq ($(wildcard $(TA_DEV_KIT_DIR)/mk/ta_dev_kit.mk), )
++clean:
++	@echo 'Note: $$(TA_DEV_KIT_DIR)/mk/ta_dev_kit.mk not found, cannot clean TA'
++	@echo 'Note: TA_DEV_KIT_DIR=$(TA_DEV_KIT_DIR)'
++endif
+diff --git a/trust_issues/ta/include/trust_issues_ta.h b/trust_issues/ta/include/trust_issues_ta.h
+new file mode 100644
+index 0000000..b9d62eb
+--- /dev/null
++++ b/trust_issues/ta/include/trust_issues_ta.h
+@@ -0,0 +1,16 @@
++#ifndef TA_TRUST_ISSUES_H
++#define TA_TRUST_ISSUES_H
++
++#define TA_TRUST_ISSUES_UUID                                                   \
++  {                                                                            \
++    0x41414141, 0x7472, 0x7573, {                                              \
++      0x74, 0x5f, 0x69, 0x73, 0x73, 0x75, 0x65, 0x73                           \
++    }                                                                          \
++  }
++
++/* The function IDs implemented in this TA */
++#define TA_TRUST_ISSUES_CMD_RUN_CODE 0
++#define TA_TRUST_ISSUES_CMD_WRITE_SECURE_OBJECT 1
++#define TA_TRUST_ISSUES_CMD_READ_SECURE_OBJECT 2
++
++#endif /*TA_TRUST_ISSUES_H*/
+diff --git a/trust_issues/ta/sub.mk b/trust_issues/ta/sub.mk
+new file mode 100644
+index 0000000..c1a7164
+--- /dev/null
++++ b/trust_issues/ta/sub.mk
+@@ -0,0 +1,5 @@
++global-incdirs-y += include
++srcs-y += trust_issues_ta.c
++
++# To remove a certain compiler flag, add a line like this
++#cflags-template_ta.c-y += -Wno-strict-prototypes
+diff --git a/trust_issues/ta/trust_issues_ta.c b/trust_issues/ta/trust_issues_ta.c
+new file mode 100644
+index 0000000..32b67a4
+--- /dev/null
++++ b/trust_issues/ta/trust_issues_ta.c
+@@ -0,0 +1,58 @@
++#include "tee_api_types.h"
++#include <tee_internal_api.h>
++#include <tee_internal_api_extensions.h>
++
++#include <trust_issues_ta.h>
++
++/*
++ * Called when the instance of the TA is created. This is the first call in
++ * the TA.
++ */
++TEE_Result TA_CreateEntryPoint(void) { return TEE_SUCCESS; }
++
++/*
++ * Called when the instance of the TA is destroyed if the TA has not
++ * crashed or panicked. This is the last call in the TA.
++ */
++void TA_DestroyEntryPoint(void) {}
++
++/*
++ * Called when a new session is opened to the TA. *sess_ctx can be updated
++ * with a value to be able to identify this session in subsequent calls to the
++ * TA. In this function you will normally do the global initialization for the
++ * TA.
++ */
++TEE_Result TA_OpenSessionEntryPoint(uint32_t param_types,
++                                    TEE_Param __maybe_unused params[4],
++                                    void __maybe_unused **sess_ctx) {
++  /* Unused parameters */
++  (void)param_types;
++  (void)&params;
++  (void)&sess_ctx;
++
++  /* If return value != TEE_SUCCESS the session will not be created. */
++  return TEE_SUCCESS;
++}
++
++/*
++ * Called when a session is closed, sess_ctx hold the value that was
++ * assigned by TA_OpenSessionEntryPoint().
++ */
++void TA_CloseSessionEntryPoint(void __maybe_unused *sess_ctx) {
++  (void)&sess_ctx; /* Unused parameter */
++}
++
++/*
++ * Called when a TA is invoked. sess_ctx hold that value that was
++ * assigned by TA_OpenSessionEntryPoint(). The rest of the paramters
++ * comes from normal world.
++ */
++TEE_Result TA_InvokeCommandEntryPoint(void __maybe_unused *sess_ctx,
++                                      uint32_t cmd_id, uint32_t param_types,
++                                      TEE_Param params[4]) {
++  (void)&sess_ctx; /* Unused parameter */
++
++  IMSG("Received command: %u", cmd_id);
++
++  return TEE_SUCCESS;
++}
+diff --git a/trust_issues/ta/user_ta_header_defines.h b/trust_issues/ta/user_ta_header_defines.h
+new file mode 100644
+index 0000000..a7a5d25
+--- /dev/null
++++ b/trust_issues/ta/user_ta_header_defines.h
+@@ -0,0 +1,27 @@
++#ifndef USER_TA_HEADER_DEFINES_H
++#define USER_TA_HEADER_DEFINES_H
++
++/* To get the TA UUID definition */
++#include <trust_issues_ta.h>
++
++#define TA_UUID TA_TRUST_ISSUES_UUID
++
++/*
++ * TA properties: multi-instance TA, no specific attribute
++ * TA_FLAG_EXEC_DDR is meaningless but mandated.
++ */
++#define TA_FLAGS TA_FLAG_EXEC_DDR
++
++/* Provisioned stack size */
++#define TA_STACK_SIZE (8 * 1024)
++
++/* Provisioned heap size for TEE_Malloc() and friends */
++#define TA_DATA_SIZE (64 * 1024)
++
++/* The gpd.ta.version property */
++#define TA_VERSION "1.0"
++
++/* The gpd.ta.description property */
++#define TA_DESCRIPTION "Trust Issues TA - Secure World, questionable decisions."
++
++#endif /* USER_TA_HEADER_DEFINES_H */

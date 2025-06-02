@@ -1,0 +1,14 @@
+.dashboard {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: var(--spacing-lg);
+  font-family: var(--font-family);
+  background-color: var(--bg-primary);
+}
+
+.infinite-scroll-loading {
+  text-align: center;
+  padding: var(--spacing-lg);
+  color: var(--text-muted);
+  font-style: italic;
+}

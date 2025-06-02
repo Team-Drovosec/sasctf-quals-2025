@@ -1,0 +1,28 @@
+services:
+  server:
+    build: ../sources
+    # image: minecraft-cave-digging # replace me with a hosted image on some container registry
+    tty: true
+    stdin_open: true
+    restart: always
+    deploy:
+      replicas: 3
+      endpoint_mode: vip
+  proxy:
+    image: itzg/bungeecord
+    restart: always
+    environment:
+      TYPE: VELOCITY
+      DEBUG: "false"
+      ENABLE_RCON: "true"
+      PLUGINS: https://github.com/Szczurowsky/VelocityLoadBalancer/releases/download/1.0/VelocityLoadBalancer.v1.0.jar
+    ports:
+      - 25565:25577
+    volumes:
+      - ./proxy/velocity.toml:/server/velocity.toml
+      - ./proxy/secret:/server/secret
+      - ./proxy:/server
+      - ./run-bungeecord.sh:/usr/bin/run-bungeecord.sh
+
+volumes:
+  proxy:

@@ -1,0 +1,59 @@
+configuration_version: v5
+worlds:
+  plotworld:
+    plot:
+      height: 200
+      size: 161
+      filling: air
+      floor: air
+      bedrock: false
+      biome: minecraft:forest
+      sign_material: OAK_WALL_SIGN
+      auto_merge: false
+      create_signs: false
+    wall:
+      place_top_block: false
+      block: stone_slab
+      block_claimed: minecraft:sandstone_slab
+      filling: stone
+      height: 62
+    road:
+      width: 1
+      height: 1
+      block: quartz_block
+      flags: {}
+    world:
+      component_below_bedrock: false
+      max_gen_height: 319
+      max_height: 320
+      gamemode: survival
+      min_gen_height: -64
+      min_height: -63
+      border_size: 1
+      border: false
+    misc_spawn_unowned: false
+    home:
+      nonmembers: center
+      default: center
+    schematic:
+      specify_on_claim: false
+      on_claim: true
+      file: jail.schem
+      schematics: []
+    chat:
+      forced: false
+      enabled: true
+    economy:
+      prices:
+        merge: 100
+        sell: 100
+        claim: 100
+      use: false
+    event:
+      spawn:
+        egg: false
+        breeding: false
+        custom: true
+    natural_mob_spawning: false
+    mob_spawner_spawning: false
+    flags: {}

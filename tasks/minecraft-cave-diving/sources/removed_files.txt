@@ -1,0 +1,10 @@
+it is unreasonable to upload a pile of common plugins here, so here's the list of removed *.jar files:
+
+./sources/plugins/paper-1.21.5-94.jar
+./sources/plugins/plugins/AuthMe-5.6.0.jar
+./sources/plugins/plugins/FastAsyncWorldEdit-Paper-2.13.1-SNAPSHOT-1107.jar
+./sources/plugins/plugins/grimac-bukkit-2.3.72-fd8c9bb.jar
+./sources/plugins/plugins/LuckPerms-Bukkit-5.4.164.jar
+./sources/plugins/plugins/multiverse-core-4.3.16.jar
+./sources/plugins/plugins/plotsquared-bukkit-7.5.3-SNAPSHOT.jar
+./sources/plugins/plugins/ProtocolLib.jar

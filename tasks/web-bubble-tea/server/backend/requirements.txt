@@ -1,0 +1,10 @@
+Flask==2.3.3
+Flask-CORS==4.0.0
+Flask-JWT-Extended==4.5.3
+Flask-SQLAlchemy==3.1.1
+redis==5.0.0
+SQLAlchemy==2.0.21
+psycopg2-binary==2.9.9
+python-dotenv==1.0.0
+uuid==1.30
+Werkzeug==2.3.7

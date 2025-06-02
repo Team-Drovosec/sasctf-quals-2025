@@ -1,0 +1,96 @@
+diff --git a/bl31/bl31.mk b/bl31/bl31.mk
+index 336ad2b..2ff55c9 100644
+--- a/bl31/bl31.mk
++++ b/bl31/bl31.mk
+@@ -183,6 +183,8 @@ ifeq ($(CROS_WIDEVINE_SMC),1)
+ BL31_SOURCES		+=	services/oem/chromeos/widevine_smc_handlers.c
+ endif
+ 
++BL31_SOURCES		+=	services/sas/sas_smc_handlers.c
++
+ BL31_DEFAULT_LINKER_SCRIPT_SOURCE := bl31/bl31.ld.S
+ 
+ ifeq ($($(ARCH)-ld-id),gnu-gcc)
+diff --git a/include/services/sas_smc_handlers.h b/include/services/sas_smc_handlers.h
+new file mode 100644
+index 0000000..0eccf0e
+--- /dev/null
++++ b/include/services/sas_smc_handlers.h
+@@ -0,0 +1,9 @@
++#ifndef __SAS_SMC_HANDLERS_H__
++#define __SAS_SMC_HANDLERS_H__
++
++#include <lib/smccc.h>
++
++#define SAS_SIP_SMC_FLAG 0xc2001337
++#define SAS_SIP_SMC_HEALTHCHECK 0xc2001338
++
++#endif // __SAS_SMC_HANDLERS_H__
+\ No newline at end of file
+diff --git a/services/sas/sas_smc_handlers.c b/services/sas/sas_smc_handlers.c
+new file mode 100644
+index 0000000..e5e058d
+--- /dev/null
++++ b/services/sas/sas_smc_handlers.c
+@@ -0,0 +1,61 @@
++#include "lib/smccc.h"
++#include <stdint.h>
++#include <string.h>
++
++#include <common/runtime_svc.h>
++#include <lib/psci/psci.h>
++#include <services/sas_smc_handlers.h>
++
++static uintptr_t sas_healthcheck_smc_handler(void *handle) {
++  /* This is a placeholder for the health check SMC handler. */
++  INFO("SAS Health Check SMC called\n");
++
++  volatile const char healthcheck[40] = "SAS{HEALTHCHECK!!!!!!!!}";
++  const uint64_t p1 = *(uint64_t *)healthcheck;
++  const uint64_t p2 = *(uint64_t *)(healthcheck + 8);
++  const uint64_t p3 = *(uint64_t *)(healthcheck + 16);
++  const uint64_t p4 = *(uint64_t *)(healthcheck + 24);
++  const uint64_t p5 = *(uint64_t *)(healthcheck + 32);
++
++  SMC_RET6(handle, SMC_OK, p1, p2, p3, p4, p5);
++}
++
++static uintptr_t sas_flag_smc_handler(void *handle) {
++  /* This is a placeholder for the flag SMC handler. */
++  INFO("SAS Flag SMC called\n");
++
++  volatile const char flag[40] = "SAS{FLAG!!!!!!!!AAAAAAAAAAAAAAAAAAAAAAA}";
++  const uint64_t p1 = *(uint64_t *)flag;
++  const uint64_t p2 = *(uint64_t *)(flag + 8);
++  const uint64_t p3 = *(uint64_t *)(flag + 16);
++  const uint64_t p4 = *(uint64_t *)(flag + 24);
++  const uint64_t p5 = *(uint64_t *)(flag + 32);
++
++  SMC_RET6(handle, SMC_OK, p1, p2, p3, p4, p5);
++}
++
++/* Handler for servicing specific SMC calls. */
++static uintptr_t sas_smc_handler(uint32_t smc_fid, u_register_t x1,
++                                 u_register_t x2, u_register_t x3,
++                                 u_register_t x4, void *cookie, void *handle,
++                                 u_register_t flags) {
++  /* Determine which security state this SMC originated from */
++  if (is_caller_non_secure(flags)) {
++    ERROR("%s: wrong world SMC (0x%x)\n", __func__, smc_fid);
++    SMC_RET1(handle, SMC_UNK);
++  }
++
++  switch (smc_fid) {
++  case SAS_SIP_SMC_HEALTHCHECK:
++    return sas_healthcheck_smc_handler(handle);
++  case SAS_SIP_SMC_FLAG:
++    return sas_flag_smc_handler(handle);
++  default:
++    WARN("Unimplemented OEM Call: 0x%x\n", smc_fid);
++    SMC_RET1(handle, SMC_UNK);
++  }
++}
++
++/* Register OEM Service Calls as runtime service */
++DECLARE_RT_SVC(sas_smc_handler, OEN_SIP_START, OEN_SIP_END, SMC_TYPE_FAST, NULL,
++               sas_smc_handler);

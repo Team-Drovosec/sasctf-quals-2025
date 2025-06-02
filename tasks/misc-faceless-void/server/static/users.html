@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Users - Faceless Void</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bs-primary: #000000;
+            --bs-primary-rgb: 0, 0, 0;
+        }
+        .navbar {
+            background: linear-gradient(135deg, #000000 0%, #333333 100%);
+        }
+        .btn-primary {
+            --bs-btn-bg: #000000;
+            --bs-btn-border-color: #000000;
+            --bs-btn-hover-bg: #333333;
+            --bs-btn-hover-border-color: #333333;
+            --bs-btn-active-bg: #333333;
+            --bs-btn-active-border-color: #333333;
+        }
+        .user-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .user-item {
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border: none;
+            margin-bottom: 8px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .user-item:hover {
+            background-color: #f0f0f0;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .user-item-left {
+            display: flex;
+            align-items: center;
+        }
+        .current-user {
+            display: flex;
+            align-items: center;
+            color: white;
+            margin-right: 15px;
+        }
+        .current-user .user-icon {
+            width: 35px;
+            height: 35px;
+            margin-right: 10px;
+        }
+        .pagination {
+            margin-bottom: 0;
+        }
+        .page-item.active .page-link {
+            background-color: #000000;
+            border-color: #000000;
+        }
+        .page-link {
+            color: #000000;
+        }
+        .page-link:hover {
+            color: #333333;
+        }
+        .blurred-text {
+            filter: blur(4px);
+        }
+        .you-badge {
+            padding: 2px 6px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            font-size: 0.875em;
+        }
+        .modal-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+        }
+        .list-group-item {
+            border: none;
+            background: transparent;
+        }
+        .card {
+            border: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .card-header {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="#"><b>Faceless Void</b></a>
+            <div class="d-flex align-items-center">
+                <div id="currentUser" class="current-user">
+                </div>
+                <button class="btn btn-outline-light" onclick="logout()">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-8 mx-auto">
+                <div class="card shadow">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0">Users</h4>
+                        <div class="d-flex align-items-center">
+                            <select id="pageSize" class="form-select form-select-sm me-2" style="width: auto;">
+                                <option value="5">5 per page</option>
+                                <option value="10">10 per page</option>
+                                <option value="20">20 per page</option>
+                            </select>
+                            <nav aria-label="Page navigation">
+                                <ul class="pagination" id="pagination">
+                                </ul>
+                            </nav>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="usersList" class="list-group">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="notesModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">User Notes</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="notesList">
+                    </div>
+                    <hr>
+                    <form id="noteForm" class="mt-3">
+                        <div class="mb-3">
+                            <textarea class="form-control" id="noteContent" rows="3" placeholder="Write a note..."></textarea>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="isPrivate">
+                            <label class="form-check-label" for="isPrivate">
+                                Private Note
+                            </label>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Add Note</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let allUsers = [];
+        let currentPage = 1;
+        let pageSize = 5;
+        const currentUserId = localStorage.getItem('user_id');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('auth_token');
+            if (!token) {
+                window.location.href = '/';
+                return;
+            }
+            pageSize = document.getElementById('pageSize').value;
+            loadUsers();
+
+            document.getElementById('pageSize').addEventListener('change', (e) => {
+                pageSize = parseInt(e.target.value);
+                currentPage = 1;
+                displayUsers();
+            });
+        });
+
+        function logout() {
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('user_id');
+            window.location.href = '/';
+        }
+
+        function formatUserId(userId) {
+            return userId.replace(/-/g, '');
+        }
+
+        function generateGradient(userId) {
+            const cleanId = formatUserId(userId);
+            
+            let hash1 = 0;
+            for (let i = 0; i < cleanId.length/2; i++) {
+                hash1 = cleanId.charCodeAt(i) + ((hash1 << 5) - hash1);
+            }
+            const hue1 = hash1 % 360;
+            
+            let hash2 = 0;
+            for (let i = cleanId.length/2; i < cleanId.length; i++) {
+                hash2 = cleanId.charCodeAt(i) + ((hash2 << 5) - hash2);
+            }
+            const hue2 = hash2 % 360;
+
+            return `linear-gradient(135deg, hsl(${hue1}, 70%, 35%) 0%, hsl(${hue2}, 70%, 35%) 100%)`;
+        }
+
+        function createUserIcon(userId, size = 'normal') {
+            const gradient = generateGradient(userId);
+            const cleanId = formatUserId(userId);
+            const shortId = cleanId.slice(0, 2).toUpperCase();
+            return `
+                <div class="user-icon" style="background: ${gradient}">
+                    ${shortId}
+                </div>
+            `;
+        }
+
+        function updatePagination() {
+            const totalPages = Math.ceil(allUsers.length / pageSize);
+            const pagination = document.getElementById('pagination');
+            pagination.innerHTML = '';
+
+            pagination.innerHTML += `
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="changePage(${currentPage - 1})">Previous</a>
+                </li>
+            `;
+
+            for (let i = 1; i <= totalPages; i++) {
+                pagination.innerHTML += `
+                    <li class="page-item ${currentPage === i ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="changePage(${i})">${i}</a>
+                    </li>
+                `;
+            }
+
+            pagination.innerHTML += `
+                <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="changePage(${currentPage + 1})">Next</a>
+                </li>
+            `;
+        }
+
+        function changePage(page) {
+            const totalPages = Math.ceil(allUsers.length / pageSize);
+            if (page < 1 || page > totalPages) return;
+            currentPage = page;
+            displayUsers();
+        }
+
+        function displayUsers() {
+            const start = (currentPage - 1) * pageSize;
+            const end = start + pageSize;
+            const pageUsers = allUsers.slice(start, end);
+            
+            const usersList = document.getElementById('usersList');
+            usersList.innerHTML = '';
+
+            pageUsers.forEach(userId => {
+                const div = document.createElement('div');
+                div.className = 'list-group-item user-item';
+                if (userId === currentUserId) {
+                    div.classList.add('bg-light');
+                }
+                div.onclick = () => showUserNotes(userId);
+                div.innerHTML = `
+                    <div class="user-item-left">
+                        ${createUserIcon(userId)}
+                        <span class="blurred-text">${formatUserId(userId)}</span>
+                    </div>
+                    ${userId === currentUserId ? '<span class="you-badge">You</span>' : ''}
+                `;
+                usersList.appendChild(div);
+            });
+
+            updatePagination();
+        }
+
+        async function loadUsers() {
+            try {
+                const response = await fetch('/api/users', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+                    }
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        window.location.href = '/';
+                        return;
+                    }
+                    throw new Error('Failed to load users');
+                }
+
+                const data = await response.json();
+                allUsers = data.users;
+
+                const currentUserDiv = document.getElementById('currentUser');
+                currentUserDiv.innerHTML = `
+                    ${createUserIcon(currentUserId, 'small')}
+                    <span class="blurred-text">${formatUserId(currentUserId)}</span>
+                `;
+
+                displayUsers();
+            } catch (error) {
+                console.error('Error loading users:', error);
+            }
+        }
+
+        async function showUserNotes(userId) {
+            try {
+                const modal = new bootstrap.Modal(document.getElementById('notesModal'));
+                modal.show();
+
+                const isCurrentUser = userId === currentUserId;
+                const endpoint = isCurrentUser ? '/api/notes' : `/api/notes/${userId}`;
+                
+                const response = await fetch(endpoint, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to load notes: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('Loading notes for user:', userId);
+                console.log('Raw notes data:', JSON.stringify(data, null, 2));
+
+                document.querySelector('#notesModal .modal-title').textContent = '';
+                document.querySelector('#notesModal .modal-title').innerHTML = `
+                    <span class="blurred-text">${formatUserId(userId)}</span>
+                    ${isCurrentUser ? '<span class="you-badge">You</span>' : ''}
+                `;
+
+                const noteForm = document.getElementById('noteForm');
+                noteForm.style.display = isCurrentUser ? 'block' : 'none';
+
+                const notesList = document.getElementById('notesList');
+
+                if (isCurrentUser) {
+                    const publicNotes = data.public_notes || [];
+                    const privateNotes = data.private_notes || [];
+
+                    notesList.innerHTML = `
+                        <div class="mb-4">
+                            <h6 class="mb-3">Public Notes (${publicNotes.length})</h6>
+                            <ul class="list-unstyled">
+                                ${publicNotes.length > 0
+                                    ? publicNotes.map(note => `<li class="mb-2 p-2 bg-light rounded">${note}</li>`).join('')
+                                    : '<li class="text-muted">No public notes</li>'
+                                }
+                            </ul>
+                        </div>
+                        <div>
+                            <h6 class="mb-3">Private Notes (${privateNotes.length})</h6>
+                            <ul class="list-unstyled">
+                                ${privateNotes.length > 0
+                                    ? privateNotes.map(note => `<li class="mb-2 p-2 bg-light rounded">${note}</li>`).join('')
+                                    : '<li class="text-muted">No private notes</li>'
+                                }
+                            </ul>
+                        </div>
+                    `;
+                } else {
+                    const publicNotes = data.public_notes || [];
+                    const privateCount = data.private_notes || 0;
+
+                    console.log('Other user notes:', {
+                        userId,
+                        publicNotes,
+                        privateCount,
+                        rawData: data
+                    });
+
+                    notesList.innerHTML = `
+                        <div class="mb-4">
+                            <h6 class="mb-3">Public Notes (${publicNotes.length})</h6>
+                            <ul class="list-unstyled">
+                                ${publicNotes.length > 0
+                                    ? publicNotes.map(note => `<li class="mb-2 p-2 bg-light rounded">${note}</li>`).join('')
+                                    : '<li class="text-muted">No public notes</li>'
+                                }
+                            </ul>
+                        </div>
+                        <div>
+                            <h6 class="mb-3">Private Notes (${privateCount})</h6>
+                            <p class="text-muted small">Private notes are only visible to the owner</p>
+                        </div>
+                    `;
+                }
+
+            } catch (error) {
+                console.error('Error loading notes:', error);
+                document.getElementById('notesList').innerHTML = `
+                    <div class="alert alert-danger">
+                        Failed to load notes: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        document.getElementById('noteForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const content = document.getElementById('noteContent').value.trim();
+            if (!content) {
+                return; 
+            }
+
+            const isPrivate = document.getElementById('isPrivate').checked;
+            console.log('Submitting new note:', { content, isPrivate });
+
+            try {
+                const submitResponse = await fetch('/api/notes', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        content: content,
+                        is_private: isPrivate
+                    })
+                });
+
+                const responseText = await submitResponse.text();
+                console.log('Raw server response:', responseText);
+
+                if (!submitResponse.ok) {
+                    console.error('Server error response:', responseText);
+                    throw new Error(`Failed to add note: ${submitResponse.status}`);
+                }
+
+                try {
+                    const result = JSON.parse(responseText);
+                    console.log('Parsed note submission response:', result);
+                } catch (e) {
+                    console.log('Response was not JSON:', responseText);
+                }
+
+                document.getElementById('noteContent').value = '';
+                document.getElementById('isPrivate').checked = false;
+                
+                await new Promise(resolve => setTimeout(resolve, 500)); 
+                
+                const refreshResponse = await fetch('/api/notes', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+                    }
+                });
+
+                if (!refreshResponse.ok) {
+                    throw new Error(`Failed to refresh notes: ${refreshResponse.status}`);
+                }
+
+                const refreshData = await refreshResponse.json();
+                console.log('Refreshed notes data:', JSON.stringify(refreshData, null, 2));
+
+                const notesList = document.getElementById('notesList');
+                const myNotesResponse = await fetch('/api/notes', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+                    }
+                });
+
+                if (!myNotesResponse.ok) {
+                    throw new Error(`Failed to fetch my notes: ${myNotesResponse.status}`);
+                }
+
+                const myNotesData = await myNotesResponse.json();
+                console.log('My notes data:', JSON.stringify(myNotesData, null, 2));
+
+                const publicNotes = myNotesData.public_notes || [];
+                const privateNotes = myNotesData.private_notes || [];
+
+                console.log('Updated notes counts:', {
+                    publicCount: publicNotes.length,
+                    privateCount: privateNotes.length
+                });
+
+                const privateNotesHtml = `
+                    <h6>Private Notes (${privateNotes.length})</h6>
+                    <ul class="list-unstyled">
+                        ${privateNotes.length > 0
+                            ? privateNotes.map(note => `<li class="mb-2">${note}</li>`).join('')
+                            : '<li class="text-muted">No private notes</li>'
+                        }
+                    </ul>
+                `;
+
+                notesList.innerHTML = `
+                    <h6>Public Notes (${publicNotes.length})</h6>
+                    <ul class="list-unstyled">
+                        ${publicNotes.length > 0
+                            ? publicNotes.map(note => `<li class="mb-2">${note}</li>`).join('')
+                            : '<li class="text-muted">No public notes</li>'
+                        }
+                    </ul>
+                    ${privateNotesHtml}
+                `;
+
+            } catch (error) {
+                console.error('Error handling note:', error);
+                alert(`Failed to handle note: ${error.message}`);
+            }
+        });
+    </script>
+</body>
+</html> 

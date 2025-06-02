@@ -1,0 +1,219 @@
+{
+  "logging": {
+    "logs": {
+      "default": {
+        "level": "DEBUG"
+      }
+    }
+  },
+  "apps": {
+    "http": {
+      "servers": {
+        "srv0": {
+          "listen": [
+            ":80"
+          ],
+          "routes": [
+            {
+              "group": "group4",
+              "match": [
+                {
+                  "path": [
+                    "/files/*"
+                  ]
+                }
+              ],
+              "handle": [
+                {
+                  "handler": "subroute",
+                  "routes": [
+                    {
+                      "handle": [
+                        {
+                          "handler": "rewrite",
+                          "strip_path_prefix": "/files"
+                        }
+                      ]
+                    },
+                    {
+                      "handle": [
+                        {
+                          "handler": "vars",
+                          "root": "/"
+                        },
+                        {
+                          "browse": {},
+                          "handler": "file_server",
+                          "hide": [
+                            "./caddyfile_read"
+                          ],
+                          "root": "/"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "group": "group4",
+              "match": [
+                {
+                  "path": [
+                    "/log"
+                  ]
+                }
+              ],
+              "handle": [
+                {
+                  "handler": "subroute",
+                  "routes": [
+                    {
+                      "handle": [
+                        {
+                          "handler": "rewrite",
+                          "strip_path_prefix": "/log"
+                        }
+                      ]
+                    },
+                    {
+                      "handle": [
+                        {
+                          "body": "'kek'",
+                          "handler": "static_response"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "group": "group4",
+              "match": [
+                {
+                  "path": [
+                    "/"
+                  ]
+                }
+              ],
+              "handle": [
+                {
+                  "handler": "subroute",
+                  "routes": [
+                    {
+                      "handle": [
+                        {
+                          "handler": "rewrite",
+                          "strip_path_prefix": "/"
+                        }
+                      ]
+                    },
+                    {
+                      "handle": [
+                        {
+                          "handler": "vars",
+                          "root": "./"
+                        },
+                        {
+                          "handler": "file_server",
+                          "hide": [
+                            "./caddyfile_read"
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "group": "group4",
+              "match": [
+                {
+                  "path": [
+                    "/*"
+                  ]
+                }
+              ],
+              "handle": [
+                {
+                  "handler": "subroute",
+                  "routes": [
+                    {
+                      "handle": [
+                        {
+                          "handler": "rewrite"
+                        }
+                      ]
+                    },
+                    {
+                      "handle": [
+                        {
+                          "defaults": [
+                            "{http.regexp.stripHostPort.1}:{http.regexp.stripHostPort.2}"
+                          ],
+                          "destinations": [
+                            "{proxyHostname}"
+                          ],
+                          "handler": "map",
+                          "mappings": [
+                            {
+                              "input": "80",
+                              "outputs": [
+                                "{http.regexp.stripHostPort.1}"
+                              ]
+                            }
+                          ],
+                          "source": "{http.regexp.stripHostPort.2}"
+                        }
+                      ]
+                    },
+                    {
+                      "group": "group3",
+                      "handle": [
+                        {
+                          "handler": "rewrite",
+                          "uri": "{http.regexp.stripHostPort.3}"
+                        }
+                      ],
+                      "match": [
+                        {
+                          "path_regexp": {
+                            "name": "stripHostPort",
+                            "pattern": "^\\/(?:[a-z]+:\\/\\/)?([^\\/]+?)(?::(\\d+))?(\\/.*)?$"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "handle": [
+                        {
+                          "handler": "reverse_proxy",
+                          "headers": {
+                            "request": {
+                              "set": {
+                                "Host": [
+                                  "{proxyHostname}"
+                                ]
+                              }
+                            }
+                          },
+                          "upstreams": [
+                            {
+                              "dial": "{http.regexp.stripHostPort.1}:{http.regexp.stripHostPort.2}"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  }
+}

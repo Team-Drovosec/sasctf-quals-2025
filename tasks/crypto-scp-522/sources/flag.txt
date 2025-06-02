@@ -1,0 +1,22 @@
+SCP FOUNDATION INTERNAL FILE
+
+Item Number: SCP-522
+Title: The Elliptic Incantation
+
+Item #: SCP-522
+Object Class: Euclid
+Special Containment Procedures: SCP-522 is to be contained within a secure chamber at Site-45, equipped with electromagnetic shielding and monitored continuously by at least two Level 3 personnel trained in cryptographic and occult procedures. Unauthorized access to SCP-522 is strictly prohibited. Any personnel attempting to perform the SAS ritual or recite the elliptic incantation without prior approval must be detained and debriefed.
+
+Description: SCP-522 refers to a cryptic ritual known as "SAS" (Secure, Analyze, Sacrifice), believed to originate from an obscure CTF (Capture The Flag) event intertwined with arcane principles. The ritual requires the invocation of an elliptic curve defined over the P-521 prime field, forming the basis of a powerful incantation used to bind or release anomalous entities.
+
+When performed correctly, the ritual produces a sequence of cryptographic glyphs believed to interact with reality on a subatomic level, allowing the practitioner to capture or contain objects of Euclid class or higher. The key phrase embedded in the ritual is:
+
+SAS{scP-521_0bj3c7_0f_cl455_Eucl1d_c4p7ur3d}
+
+Attempts to replicate the ritual outside controlled environments have resulted in unpredictable spatial distortions and localized time dilation effects.
+
+Addendum 522-A: The elliptic incantation is structured around the P-521 curve parameters, which correspond to a well-known NIST standard for elliptic curve cryptography. This suggests that SCP-522 may be a fusion of modern cryptographic theory and ancient ritualistic practices.
+
+Addendum 522-B: Testing with D-Class personnel indicates that repeated chanting of the incantation may cause mild to severe disorientation, with reports of vivid hallucinations involving geometric patterns and recursive loops.
+
+End of File.

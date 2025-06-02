@@ -1,0 +1,111 @@
+
+hash_riscv64:     file format elf64-littleriscv
+
+
+Disassembly of section .text:
+
+00000000000100b0 <reversible_transform>:
+   100b0:	fa010113          	add	sp,sp,-96
+   100b4:	04813c23          	sd	s0,88(sp)
+   100b8:	06010413          	add	s0,sp,96
+   100bc:	faa43423          	sd	a0,-88(s0)
+   100c0:	fab43023          	sd	a1,-96(s0)
+   100c4:	f00dc7b7          	lui	a5,0xf00dc
+   100c8:	abe78793          	add	a5,a5,-1346 # fffffffff00dbabe <__global_pointer$+0xfffffffff00ca06e>
+   100cc:	faf42c23          	sw	a5,-72(s0)
+   100d0:	deadc7b7          	lui	a5,0xdeadc
+   100d4:	eef78793          	add	a5,a5,-273 # ffffffffdeadbeef <__global_pointer$+0xffffffffdeaca49f>
+   100d8:	faf42e23          	sw	a5,-68(s0)
+   100dc:	badc17b7          	lui	a5,0xbadc1
+   100e0:	ffe78793          	add	a5,a5,-2 # ffffffffbadc0ffe <__global_pointer$+0xffffffffbadaf5ae>
+   100e4:	fcf42023          	sw	a5,-64(s0)
+   100e8:	feee07b7          	lui	a5,0xfeee0
+   100ec:	ace78793          	add	a5,a5,-1330 # fffffffffeedface <__global_pointer$+0xfffffffffeece07e>
+   100f0:	fcf42223          	sw	a5,-60(s0)
+   100f4:	fe043423          	sd	zero,-24(s0)
+   100f8:	fa043703          	ld	a4,-96(s0)
+   100fc:	00800793          	li	a5,8
+   10100:	00e7f663          	bgeu	a5,a4,1010c <reversible_transform+0x5c>
+   10104:	00800793          	li	a5,8
+   10108:	faf43023          	sd	a5,-96(s0)
+   1010c:	fe043023          	sd	zero,-32(s0)
+   10110:	0440006f          	j	10154 <reversible_transform+0xa4>
+   10114:	fa843703          	ld	a4,-88(s0)
+   10118:	fe043783          	ld	a5,-32(s0)
+   1011c:	00f707b3          	add	a5,a4,a5
+   10120:	0007c783          	lbu	a5,0(a5)
+   10124:	00078713          	mv	a4,a5
+   10128:	fe043783          	ld	a5,-32(s0)
+   1012c:	0007879b          	sext.w	a5,a5
+   10130:	0037979b          	sllw	a5,a5,0x3
+   10134:	0007879b          	sext.w	a5,a5
+   10138:	00f717b3          	sll	a5,a4,a5
+   1013c:	fe843703          	ld	a4,-24(s0)
+   10140:	00f767b3          	or	a5,a4,a5
+   10144:	fef43423          	sd	a5,-24(s0)
+   10148:	fe043783          	ld	a5,-32(s0)
+   1014c:	00178793          	add	a5,a5,1
+   10150:	fef43023          	sd	a5,-32(s0)
+   10154:	fe043703          	ld	a4,-32(s0)
+   10158:	fa043783          	ld	a5,-96(s0)
+   1015c:	faf76ce3          	bltu	a4,a5,10114 <reversible_transform+0x64>
+   10160:	fe843783          	ld	a5,-24(s0)
+   10164:	0207d793          	srl	a5,a5,0x20
+   10168:	fcf42e23          	sw	a5,-36(s0)
+   1016c:	fe843783          	ld	a5,-24(s0)
+   10170:	fcf42c23          	sw	a5,-40(s0)
+   10174:	fc042a23          	sw	zero,-44(s0)
+   10178:	0a80006f          	j	10220 <reversible_transform+0x170>
+   1017c:	fd842783          	lw	a5,-40(s0)
+   10180:	fcf42823          	sw	a5,-48(s0)
+   10184:	fd442783          	lw	a5,-44(s0)
+   10188:	00279793          	sll	a5,a5,0x2
+   1018c:	ff078793          	add	a5,a5,-16
+   10190:	008787b3          	add	a5,a5,s0
+   10194:	fc87a783          	lw	a5,-56(a5)
+   10198:	fd842703          	lw	a4,-40(s0)
+   1019c:	fce42623          	sw	a4,-52(s0)
+   101a0:	fcf42423          	sw	a5,-56(s0)
+   101a4:	fcc42783          	lw	a5,-52(s0)
+   101a8:	00078713          	mv	a4,a5
+   101ac:	fc842783          	lw	a5,-56(s0)
+   101b0:	00f747b3          	xor	a5,a4,a5
+   101b4:	fcf42623          	sw	a5,-52(s0)
+   101b8:	fcc42783          	lw	a5,-52(s0)
+   101bc:	0057971b          	sllw	a4,a5,0x5
+   101c0:	01b7d79b          	srlw	a5,a5,0x1b
+   101c4:	00f767b3          	or	a5,a4,a5
+   101c8:	0007871b          	sext.w	a4,a5
+   101cc:	045da7b7          	lui	a5,0x45da
+   101d0:	f3b7879b          	addw	a5,a5,-197 # 45d9f3b <__global_pointer$+0x45c84eb>
+   101d4:	02f707bb          	mulw	a5,a4,a5
+   101d8:	fcf42623          	sw	a5,-52(s0)
+   101dc:	fcc42783          	lw	a5,-52(s0)
+   101e0:	0107d79b          	srlw	a5,a5,0x10
+   101e4:	0007879b          	sext.w	a5,a5
+   101e8:	fcc42703          	lw	a4,-52(s0)
+   101ec:	00f747b3          	xor	a5,a4,a5
+   101f0:	fcf42623          	sw	a5,-52(s0)
+   101f4:	fcc42783          	lw	a5,-52(s0)
+   101f8:	0007879b          	sext.w	a5,a5
+   101fc:	0007879b          	sext.w	a5,a5
+   10200:	fdc42703          	lw	a4,-36(s0)
+   10204:	00f747b3          	xor	a5,a4,a5
+   10208:	fcf42c23          	sw	a5,-40(s0)
+   1020c:	fd042783          	lw	a5,-48(s0)
+   10210:	fcf42e23          	sw	a5,-36(s0)
+   10214:	fd442783          	lw	a5,-44(s0)
+   10218:	0017879b          	addw	a5,a5,1
+   1021c:	fcf42a23          	sw	a5,-44(s0)
+   10220:	fd442783          	lw	a5,-44(s0)
+   10224:	0007871b          	sext.w	a4,a5
+   10228:	00300793          	li	a5,3
+   1022c:	f4e7d8e3          	bge	a5,a4,1017c <reversible_transform+0xcc>
+   10230:	fdc46783          	lwu	a5,-36(s0)
+   10234:	02079713          	sll	a4,a5,0x20
+   10238:	fd846783          	lwu	a5,-40(s0)
+   1023c:	00f767b3          	or	a5,a4,a5
+   10240:	00078513          	mv	a0,a5
+   10244:	05813403          	ld	s0,88(sp)
+   10248:	06010113          	add	sp,sp,96
+   1024c:	00008067          	ret

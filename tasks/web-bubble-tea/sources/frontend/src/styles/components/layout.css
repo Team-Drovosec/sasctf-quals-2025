@@ -1,0 +1,71 @@
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-lg);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.header h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.user-menu-container {
+  position: relative;
+}
+
+.user-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background-color: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.15);
+  min-width: 150px;
+  z-index: 10;
+  margin-top: var(--spacing-xs);
+  overflow: hidden;
+  border: 2px solid var(--border-primary);
+}
+
+.post-menu-container {
+  position: relative;
+}
+
+.post-menu-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-full);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.post-menu-button:hover {
+  background-color: var(--bg-hover);
+}
+
+.post-menu-button svg {
+  width: 18px;
+  height: 18px;
+  fill: var(--text-secondary);
+}
+
+.post-menu {
+  position: fixed;
+  z-index: 1000;
+  background-color: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  border: 2px solid var(--border-primary);
+  min-width: 180px;
+  overflow: hidden;
+  cursor: default;
+}

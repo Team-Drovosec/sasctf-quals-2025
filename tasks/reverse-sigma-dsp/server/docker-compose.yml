@@ -1,0 +1,6 @@
+services:
+  task-sigma-dsp:
+    build: .
+    restart: always
+    ports:
+        - "127.0.0.1:25046:80"

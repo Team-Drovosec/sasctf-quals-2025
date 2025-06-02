@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VIP Room - Burmalda Casino</title>
+    <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --casino-gold: #FFD700;
+            --casino-red: #8B0000;
+            --casino-black: #1A1A1A;
+        }
+        
+        body {
+            background: var(--casino-black);
+            color: white;
+            font-family: 'Arial', sans-serif;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+            margin: 0;
+            padding: 0;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                linear-gradient(45deg, transparent 48%, var(--casino-gold) 49%, var(--casino-gold) 51%, transparent 52%),
+                linear-gradient(-45deg, transparent 48%, var(--casino-gold) 49%, var(--casino-gold) 51%, transparent 52%);
+            background-size: 60px 60px;
+            opacity: 0.05;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .casino-header {
+            background: var(--casino-red);
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .casino-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                linear-gradient(45deg, transparent 48%, var(--casino-gold) 49%, var(--casino-gold) 51%, transparent 52%),
+                linear-gradient(-45deg, transparent 48%, var(--casino-gold) 49%, var(--casino-gold) 51%, transparent 52%);
+            background-size: 30px 30px;
+            opacity: 0.1;
+            pointer-events: none;
+        }
+
+        .casino-title {
+            color: var(--casino-gold);
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            font-size: 2.5rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin: 0;
+            position: relative;
+        }
+
+        .casino-title .section-icon {
+            width: 48px;
+            height: 24px;
+            color: var(--casino-gold);
+            margin-right: 10px;
+        }
+
+        .slot-machine-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin: 2rem auto;
+            background: rgba(0, 0, 0, 0.8);
+            border: 4px solid var(--casino-gold);
+            border-radius: 20px;
+            overflow: hidden;
+            aspect-ratio: 16/9;
+        }
+
+        .slot-video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .slot-lever {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 40px;
+            height: 140px;
+            background: var(--casino-gold);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            z-index: 2;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+        }
+
+        .slot-lever::before {
+            content: '';
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 30px;
+            height: 30px;
+            background: var(--casino-red);
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(139, 0, 0, 0.5);
+        }
+
+        .slot-lever:hover {
+            transform: translateY(-50%) scale(1.05);
+        }
+
+        .slot-lever.pulled {
+            transform: translateY(-50%) rotate(-30deg);
+        }
+
+        .ready-to-play {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--casino-gold);
+            font-size: 2rem;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            z-index: 1;
+        }
+
+        .result-image {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            max-width: 90vw;
+            max-height: 90vh;
+            z-index: 1000;
+            opacity: 0;
+            transition: transform 0.5s ease, opacity 0.5s ease;
+            cursor: pointer;
+        }
+
+        .result-image.show {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+        }
+
+        .result-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+            cursor: pointer;
+        }
+
+        .result-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .video-section {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid var(--casino-gold);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+            position: relative;
+            aspect-ratio: 16/9;
+        }
+
+        .video-section video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .video-section.webcam {
+            background: #000;
+        }
+
+        .video-section.webcam video {
+            transform: scaleX(-1);
+            object-fit: cover;
+        }
+
+        .video-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, rgba(0,0,0,0.5), transparent);
+            pointer-events: none;
+        }
+
+        .video-title {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            color: var(--casino-gold);
+            font-size: 1.2rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            z-index: 1;
+        }
+
+        .wallet-section {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            border-radius: 10px;
+            margin: 0;
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+            backdrop-filter: blur(5px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            min-width: 300px;
+        }
+
+        .balance-display {
+            font-size: 1.5rem;
+            color: var(--casino-gold);
+            text-align: center;
+            margin: 1rem 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .balance-icon {
+            width: 24px;
+            height: 24px;
+            color: var(--casino-gold);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #ton-connect button {
+            background: var(--casino-gold) !important;
+            color: var(--casino-black) !important;
+            border: none !important;
+            padding: 0.8rem 1.5rem !important;
+            border-radius: 5px !important;
+            font-weight: bold !important;
+            transition: all 0.3s ease !important;
+            position: relative !important;
+            overflow: hidden !important;
+            z-index: 1 !important;
+            cursor: pointer !important;
+            font-size: 1rem !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 0.5rem !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+        }
+
+        #ton-connect button > div {
+            width: 100%;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 0.5rem !important;
+        }
+
+        #ton-connect button:hover {
+            background: #FFC800 !important;
+            transform: scale(1.05) !important;
+        }
+
+        #ton-connect button::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: -100% !important;
+            width: 100% !important;
+            height: 100% !important;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent) !important;
+            transition: 0.5s !important;
+            pointer-events: none !important;
+            z-index: -1 !important;
+        }
+
+        #ton-connect button:hover::before {
+            left: 100% !important;
+        }
+
+        #ton-connect button i {
+            font-size: 1.2rem !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="casino-header">
+        <div class="container">
+            <div class="header-content">
+                <h1 class="casino-title">
+                    <i class="fas fa-crown section-icon"></i>
+                    VIP Room
+                </h1>
+                <div class="wallet-section">
+                    <div id="ton-connect"></div>
+                    <div class="balance-display">
+                        <i class="fas fa-coins balance-icon"></i>
+                        Balance: <span id="balance">0</span> TON
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container mt-4">
+        <div class="slot-machine-container">
+            <video class="slot-video" id="slotVideo" preload="auto">
+                <source src="/vip/static/owl.webm" type="video/webm">
+            </video>
+            <div class="slot-lever" id="slotLever"></div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4">
+                <div class="video-section">
+                    <video autoplay loop muted playsinline preload="auto" id="video1">
+                        <source src="/vip/static/papeezy_stul.webm" type="video/webm">
+                    </video>
+                    <div class="video-overlay"></div>
+                    <div class="video-title">VIP Stream 1</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="video-section">
+                    <video autoplay loop muted playsinline preload="auto" id="video2">
+                        <source src="/vip/static/papeezy_nuts.webm" type="video/webm">
+                    </video>
+                    <div class="video-overlay"></div>
+                    <div class="video-title">VIP Stream 2</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="video-section webcam">
+                    <video id="webcam" autoplay muted playsinline></video>
+                    <div class="video-overlay"></div>
+                    <div class="video-title">Live Stream</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="result-overlay" id="resultOverlay"></div>
+    <img src="/vip/static/shma.png" class="result-image" id="resultImage" alt="Result">
+    <audio id="jackpotSound" preload="auto">
+        <source src="/vip/static/jackpot.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+            manifestUrl: 'https://burmalda.task.sasc.tf/tonconnect-manifest.json',
+            buttonRootId: 'ton-connect'
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const slotLever = document.getElementById('slotLever');
+            const slotVideo = document.getElementById('slotVideo');
+            const resultOverlay = document.getElementById('resultOverlay');
+            const resultImage = document.getElementById('resultImage');
+            const jackpotSound = document.getElementById('jackpotSound');
+            let isPlaying = false;
+
+            slotVideo.currentTime = 0;
+            slotVideo.pause();
+
+            function hideResult() {
+                resultOverlay.classList.remove('show');
+                resultImage.classList.remove('show');
+                slotVideo.currentTime = 0;
+                slotVideo.pause();
+                jackpotSound.pause();
+                jackpotSound.currentTime = 0;
+                slotLever.classList.remove('pulled');
+                isPlaying = false;
+            }
+
+            resultOverlay.addEventListener('click', hideResult);
+            resultImage.addEventListener('click', hideResult);
+
+            slotLever.addEventListener('click', function() {
+                if (isPlaying) return;
+                
+                isPlaying = true;
+                slotLever.classList.add('pulled');
+                slotVideo.play();
+
+                slotVideo.addEventListener('timeupdate', function() {
+                    if (slotVideo.duration - slotVideo.currentTime <= 3) {
+                        jackpotSound.play();
+                        slotVideo.removeEventListener('timeupdate', arguments.callee);
+                    }
+                });
+
+                slotVideo.addEventListener('ended', function() {
+                    resultOverlay.classList.add('show');
+                    resultImage.classList.add('show');
+                }, { once: true });
+            });
+        });
+
+        async function setupWebcam() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    } 
+                });
+                const webcamVideo = document.getElementById('webcam');
+                webcamVideo.srcObject = stream;
+            } catch (error) {
+                console.error('Error accessing webcam:', error);
+                document.querySelector('.webcam .video-title').textContent = 'Camera Access Denied';
+            }
+        }
+
+        setupWebcam();
+
+        tonConnectUI.onStatusChange(wallet => {
+            if (wallet && wallet.connectItems?.tonProof && 'proof' in wallet.connectItems.tonProof) {
+                let proof = wallet.connectItems.tonProof;
+                tonConnectUI.account.network = tonConnectUI.account.chain;
+                let data = {
+                    proof: proof.proof,
+                    account: tonConnectUI.account
+                };
+                fetch('/api/auth', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data),
+                    credentials: 'include'
+                }).then(r => r.json().then(data => {
+                    if (data.data.success) {
+                        fetch('/api/users/me', {
+                            credentials: 'include'
+                        }).then(r => {
+                            if (!r.ok) {
+                                throw new Error('Failed to verify authentication');
+                            }
+                            return r.json();
+                        }).then(data => {
+                            if (data.status === 'authenticated') {
+                                loadUserData();
+                            } else {
+                                console.error('Authentication verification failed');
+                            }
+                        }).catch(error => {
+                            console.error('Error verifying authentication:', error);
+                        });
+                    }
+                }));
+            }
+        });
+
+        function loadUserData() {
+            fetch('/api/users/me', {
+                credentials: 'include'
+            }).then(r => {
+                if (!r.ok) {
+                    throw new Error('Failed to load user data');
+                }
+                return r.json();
+            }).then(data => {
+                if (data.status === 'authenticated') {
+                    const balance = parseFloat(data.user.balance);
+                    document.getElementById('balance').textContent = balance.toFixed(2);
+                } else {
+                    document.getElementById('balance').textContent = '0.00';
+                }
+            }).catch(error => {
+                console.error('Error loading user data:', error);
+                document.getElementById('balance').textContent = '0.00';
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadUserData();
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const video1 = document.getElementById('video1');
+            const video2 = document.getElementById('video2');
+
+            function setupVideoLoop(video) {
+                video.addEventListener('timeupdate', function() {
+                    if (video.currentTime >= video.duration - 0.1) {
+                        video.currentTime = 0;
+                    }
+                });
+            }
+
+            setupVideoLoop(video1);
+            setupVideoLoop(video2);
+        });
+    </script>
+</body>
+</html> 

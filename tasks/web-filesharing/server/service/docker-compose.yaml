@@ -1,0 +1,30 @@
+version: "3"
+
+services:
+  webapp:
+    build: web
+    ports:
+      - "4000:4000"
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: 8
+          memory: 8G
+        reservations:
+          cpus: 2
+          memory: 64M
+
+  storage:
+    build: storage
+    ports:
+      - "4080:4080"
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: 8
+          memory: 8G
+        reservations:
+          cpus: 2
+          memory: 64M

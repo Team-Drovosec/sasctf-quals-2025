@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Burmalda Casino - Authentication</title>
+    <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --casino-gold: #FFD700;
+            --casino-red: #8B0000;
+            --casino-black: #1A1A1A;
+        }
+        
+        body {
+            background: var(--casino-black);
+            color: white;
+            font-family: 'Arial', sans-serif;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                linear-gradient(45deg, transparent 48%, var(--casino-gold) 49%, var(--casino-gold) 51%, transparent 52%),
+                linear-gradient(-45deg, transparent 48%, var(--casino-gold) 49%, var(--casino-gold) 51%, transparent 52%);
+            background-size: 60px 60px;
+            opacity: 0.05;
+            pointer-events: none;
+            z-index: 0;
+            animation: patternMove 20s linear infinite;
+        }
+
+        @keyframes patternMove {
+            0% { background-position: 0 0; }
+            100% { background-position: 60px 60px; }
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 50% 50%, var(--casino-red) 0%, transparent 50%),
+                radial-gradient(circle at 0% 0%, var(--casino-gold) 0%, transparent 50%),
+                radial-gradient(circle at 100% 0%, var(--casino-gold) 0%, transparent 50%),
+                radial-gradient(circle at 100% 100%, var(--casino-red) 0%, transparent 50%),
+                radial-gradient(circle at 0% 100%, var(--casino-red) 0%, transparent 50%);
+            opacity: 0.1;
+            pointer-events: none;
+            z-index: 0;
+            animation: gradientPulse 8s ease-in-out infinite;
+        }
+
+        @keyframes gradientPulse {
+            0%, 100% { opacity: 0.1; }
+            50% { opacity: 0.15; }
+        }
+
+        .auth-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 2.5rem;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+            backdrop-filter: blur(10px);
+            border: 2px solid var(--casino-gold);
+            max-width: 600px;
+            width: 90%;
+            margin: 2rem;
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.1);
+            transform: translateY(0);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            animation: containerFloat 6s ease-in-out infinite;
+        }
+
+        @keyframes containerFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .auth-container:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 0 40px rgba(255, 215, 0, 0.2);
+        }
+
+        .auth-title {
+            color: var(--casino-gold);
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            animation: titleGlow 2s ease-in-out infinite;
+        }
+
+        @keyframes titleGlow {
+            0%, 100% { text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5); }
+            50% { text-shadow: 0 0 20px rgba(255, 215, 0, 0.5); }
+        }
+
+        .auth-subtitle {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.2rem;
+            margin-bottom: 2.5rem;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+        }
+
+        #ton-connect {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+
+        #ton-connect > div {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+
+        #ton-connect button {
+            background: var(--casino-gold) !important;
+            color: var(--casino-black) !important;
+            border: none !important;
+            padding: 1rem 2rem !important;
+            border-radius: 5px !important;
+            font-weight: bold !important;
+            transition: all 0.3s ease !important;
+            position: relative !important;
+            overflow: hidden !important;
+            z-index: 1 !important;
+            cursor: pointer !important;
+            font-size: 1.1rem !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 0.5rem !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+        }
+
+        #ton-connect button > div {
+            width: 100%;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 0.5rem !important;
+        }
+
+        #ton-connect button:hover {
+            background: #FFC800 !important;
+            transform: scale(1.05) !important;
+        }
+
+        #ton-connect button::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: -100% !important;
+            width: 100% !important;
+            height: 100% !important;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent) !important;
+            transition: 0.5s !important;
+            pointer-events: none !important;
+            z-index: -1 !important;
+        }
+
+        #ton-connect button:hover::before {
+            left: 100% !important;
+        }
+
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+
+        .toast {
+            background: rgba(26, 26, 26, 0.95);
+            border: 2px solid var(--casino-gold);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 10px;
+            min-width: 300px;
+            max-width: 400px;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transform: translateX(120%);
+            transition: transform 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast.error {
+            border-color: #ff0000;
+        }
+
+        .toast-icon {
+            font-size: 1.5rem;
+        }
+
+        .toast.error .toast-icon {
+            color: #ff0000;
+        }
+
+        .toast-content {
+            flex: 1;
+        }
+
+        .toast-title {
+            font-weight: bold;
+            margin-bottom: 0.25rem;
+        }
+
+        .toast-message {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .floating-cards {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .floating-card {
+            position: absolute;
+            width: 60px;
+            height: 90px;
+            background: rgba(255, 215, 0, 0.1);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            border-radius: 8px;
+            animation: floatCard 15s linear infinite;
+        }
+
+        @keyframes floatCard {
+            0% {
+                transform: translateY(100vh) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.5;
+            }
+            90% {
+                opacity: 0.5;
+            }
+            100% {
+                transform: translateY(-100px) rotate(360deg);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="floating-cards" id="floatingCards"></div>
+    <div class="auth-container">
+        <h1 class="auth-title">
+            <i class="fas fa-dice"></i>
+            Burmalda Casino
+        </h1>
+        <p class="auth-subtitle">Connect your TON wallet to start playing</p>
+        <div id="ton-connect"></div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+            manifestUrl: 'https://burmalda.task.sasc.tf/tonconnect-manifest.json',
+            buttonRootId: 'ton-connect'
+        });
+
+        tonConnectUI.setConnectRequestParameters({
+            state: 'loading'
+        });
+
+        document.getElementById('ton-connect').addEventListener('click', e => {
+            fetch('/api/users/wallet_auth').then(r => {
+                r.json().then(data => {
+                    tonConnectUI.setConnectRequestParameters({
+                        state: "ready",
+                        value: { tonProof: data.data.nonce }
+                    });
+                })
+            })
+        });
+
+        function showToast(message, type = 'error', title = '') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            const icon = type === 'error' ? 'times-circle' : 'info-circle';
+            
+            toast.innerHTML = `
+                <i class="fas fa-${icon} toast-icon"></i>
+                <div class="toast-content">
+                    ${title ? `<div class="toast-title">${title}</div>` : ''}
+                    <div class="toast-message">${message}</div>
+                </div>
+            `;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => toast.classList.add('show'), 10);
+            
+            setTimeout(() => {
+                if (toast.parentElement) {
+                    toast.classList.remove('show');
+                    setTimeout(() => toast.remove(), 300);
+                }
+            }, 5000);
+        }
+
+        tonConnectUI.onStatusChange(wallet => {
+            if (wallet && wallet.connectItems?.tonProof && 'proof' in wallet.connectItems.tonProof) {
+                let proof = wallet.connectItems.tonProof;
+                tonConnectUI.account.network = tonConnectUI.account.chain;
+                let data = {
+                    proof: proof.proof,
+                    account: tonConnectUI.account
+                };
+                fetch('/api/auth', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data),
+                    credentials: 'include'
+                }).then(r => r.json().then(data => {
+                    if (data.data.success) {
+                        fetch('/api/users/me', {
+                            credentials: 'include'
+                        }).then(r => {
+                            if (!r.ok) {
+                                throw new Error('Failed to verify authentication');
+                            }
+                            return r.json();
+                        }).then(data => {
+                            if (data.status === 'authenticated') {
+                                window.location.reload();
+                            } else {
+                                showToast('Authentication verification failed', 'error', 'Error');
+                            }
+                        }).catch(error => {
+                            showToast('Error verifying authentication', 'error', 'Error');
+                        });
+                    }
+                }));
+            }
+        });
+
+        function createFloatingCards() {
+            const container = document.getElementById('floatingCards');
+            const colors = ['#FFD700', '#8B0000'];
+            
+            for (let i = 0; i < 10; i++) {
+                const card = document.createElement('div');
+                card.className = 'floating-card';
+                card.style.left = `${Math.random() * 100}%`;
+                card.style.animationDelay = `${Math.random() * 15}s`;
+                card.style.animationDuration = `${15 + Math.random() * 10}s`;
+                card.style.transform = `rotate(${Math.random() * 360}deg)`;
+                card.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                card.style.opacity = '0.1';
+                container.appendChild(card);
+            }
+        }
+
+        createFloatingCards();
+    </script>
+</body>
+</html> 

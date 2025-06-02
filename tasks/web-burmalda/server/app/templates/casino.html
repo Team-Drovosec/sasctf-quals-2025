@@ -1,0 +1,1639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Burmalda Casino</title>
+    <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --casino-gold: #FFD700;
+            --casino-red: #8B0000;
+            --casino-black: #1A1A1A;
+        }
+        
+        body {
+            background: var(--casino-black);
+            color: white;
+            font-family: 'Arial', sans-serif;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+            margin: 0;
+            padding: 0;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                linear-gradient(45deg, transparent 48%, var(--casino-gold) 49%, var(--casino-gold) 51%, transparent 52%),
+                linear-gradient(-45deg, transparent 48%, var(--casino-gold) 49%, var(--casino-gold) 51%, transparent 52%);
+            background-size: 60px 60px;
+            opacity: 0.05;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 50% 50%, var(--casino-red) 0%, transparent 50%),
+                radial-gradient(circle at 0% 0%, var(--casino-gold) 0%, transparent 50%),
+                radial-gradient(circle at 100% 0%, var(--casino-gold) 0%, transparent 50%),
+                radial-gradient(circle at 100% 100%, var(--casino-red) 0%, transparent 50%),
+                radial-gradient(circle at 0% 100%, var(--casino-red) 0%, transparent 50%);
+            opacity: 0.1;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .casino-header {
+            background: var(--casino-red);
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .casino-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                linear-gradient(45deg, transparent 48%, var(--casino-gold) 49%, var(--casino-gold) 51%, transparent 52%),
+                linear-gradient(-45deg, transparent 48%, var(--casino-gold) 49%, var(--casino-gold) 51%, transparent 52%);
+            background-size: 30px 30px;
+            opacity: 0.1;
+            pointer-events: none;
+        }
+
+        .casino-title {
+            color: var(--casino-gold);
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            font-size: 2.5rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin: 0;
+            position: relative;
+        }
+
+        .casino-title .section-icon {
+            width: 48px;
+            height: 24px;
+            color: var(--casino-gold);
+            margin-right: 10px;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+        }
+
+        .game-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border: 2px solid var(--casino-gold);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+            backdrop-filter: blur(5px);
+        }
+
+        .game-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 215, 0, 0.1) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .game-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(255, 215, 0, 0.2);
+        }
+
+        .game-card:hover::before {
+            opacity: 1;
+        }
+
+        .btn-casino {
+            background: var(--casino-gold);
+            color: var(--casino-black);
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 5px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+            cursor: pointer;
+        }
+
+        .btn-casino::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: 0.5s;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .btn-casino:hover {
+            background: #FFC800;
+            transform: scale(1.05);
+        }
+
+        .btn-casino:hover::before {
+            left: 100%;
+        }
+
+        .wallet-section {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            border-radius: 10px;
+            margin: 0;
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+            backdrop-filter: blur(5px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            min-width: 300px;
+        }
+
+        .wallet-section::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100px;
+            height: 100px;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23FFD700' opacity='0.1'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z'/%3E%3C/svg%3E") no-repeat center center;
+            opacity: 0.1;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        #ton-connect {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+
+        #ton-connect > div {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+
+        #ton-connect button {
+            background: var(--casino-gold) !important;
+            color: var(--casino-black) !important;
+            border: none !important;
+            padding: 0.8rem 1.5rem !important;
+            border-radius: 5px !important;
+            font-weight: bold !important;
+            transition: all 0.3s ease !important;
+            position: relative !important;
+            overflow: hidden !important;
+            z-index: 1 !important;
+            cursor: pointer !important;
+            font-size: 1rem !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 0.5rem !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+        }
+
+        #ton-connect button > div {
+            width: 100%;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 0.5rem !important;
+        }
+
+        #ton-connect button:hover {
+            background: #FFC800 !important;
+            transform: scale(1.05) !important;
+        }
+
+        #ton-connect button::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: -100% !important;
+            width: 100% !important;
+            height: 100% !important;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent) !important;
+            transition: 0.5s !important;
+            pointer-events: none !important;
+            z-index: -1 !important;
+        }
+
+        #ton-connect button:hover::before {
+            left: 100% !important;
+        }
+
+        #ton-connect button i {
+            font-size: 1.2rem !important;
+        }
+
+        .game-history {
+            max-height: 400px;
+            overflow-y: auto;
+            padding-right: 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .game-history::-webkit-scrollbar {
+            width: 8px;
+            z-index: 2;
+        }
+
+        .game-history::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        .game-history::-webkit-scrollbar-thumb {
+            background: var(--casino-gold);
+            border-radius: 4px;
+        }
+
+        .game-history::-webkit-scrollbar-thumb:hover {
+            background: #FFC800;
+        }
+
+        .history-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1.5rem;
+            margin: 0.8rem 0;
+            border-radius: 10px;
+            border-left: 4px solid var(--casino-gold);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(5px);
+        }
+
+        .history-item.won {
+            background: rgba(0, 255, 0, 0.1);
+            border-left: 4px solid #00ff00;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.1);
+        }
+
+        .history-item.lost {
+            background: rgba(255, 0, 0, 0.1);
+            border-left: 4px solid #ff0000;
+        }
+
+        .game-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(255, 215, 0, 0.2);
+        }
+
+        .game-number {
+            font-size: 1.2rem;
+            color: var(--casino-gold);
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+        }
+
+        .game-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 2rem;
+        }
+
+        .player-side {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .player-side.winner {
+            background: rgba(0, 255, 0, 0.15);
+            border: 1px solid rgba(0, 255, 0, 0.2);
+        }
+
+        .player-side.loser {
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid rgba(255, 0, 0, 0.2);
+        }
+
+        .player-value {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: var(--casino-gold);
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+        }
+
+        .player-value .chess-piece {
+            width: 32px;
+            height: 32px;
+            filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.5));
+        }
+
+        .player-label {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .player-label.current-user {
+            color: var(--casino-gold);
+            font-weight: bold;
+        }
+
+        .vs-divider {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--casino-gold);
+            font-weight: bold;
+            padding: 0 1rem;
+        }
+
+        .vs-line {
+            width: 1px;
+            height: 40px;
+            background: linear-gradient(180deg, 
+                transparent 0%, 
+                rgba(255, 215, 0, 0.3) 20%, 
+                rgba(255, 215, 0, 0.5) 50%, 
+                rgba(255, 215, 0, 0.3) 80%, 
+                transparent 100%
+            );
+        }
+
+        .game-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255, 215, 0, 0.2);
+        }
+
+        .game-time {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+        }
+
+        .game-stake {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--casino-gold);
+            font-weight: bold;
+        }
+
+        .stake-icon {
+            width: 20px;
+            height: 20px;
+            color: var(--casino-gold);
+        }
+
+        .vs-badge {
+            background: rgba(255, 215, 0, 0.2);
+            color: var(--casino-gold);
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            margin: 0.5rem 0;
+            display: inline-block;
+        }
+
+        .balance-display {
+            font-size: 1.5rem;
+            color: var(--casino-gold);
+            text-align: center;
+            margin: 1rem 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .balance-icon {
+            width: 24px;
+            height: 24px;
+            color: var(--casino-gold);
+        }
+
+        .stake-input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--casino-gold);
+            color: white;
+            padding: 0.8rem;
+            border-radius: 5px;
+            width: 100%;
+            margin: 1rem 0;
+            transition: all 0.3s ease;
+            position: relative;
+            z-index: 1;
+        }
+
+        .stake-input:focus {
+            outline: none;
+            border-color: #FFC800;
+            box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.2);
+        }
+
+        .card-suit {
+            font-size: 2rem;
+            margin: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .card-icon {
+            width: 32px;
+            height: 32px;
+            fill: var(--casino-gold);
+        }
+
+        .winner {
+            color: #00ff00;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+        }
+
+        .loser {
+            color: #ff0000;
+            text-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+        }
+
+        .section-title {
+            color: var(--casino-gold);
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-icon {
+            width: 24px;
+            height: 24px;
+            color: var(--casino-gold);
+        }
+
+        .waiting-badge {
+            background: rgba(255, 215, 0, 0.2);
+            color: var(--casino-gold);
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            display: inline-block;
+            margin: 0.5rem 0;
+        }
+
+        .stake-badge {
+            background: rgba(139, 0, 0, 0.2);
+            color: var(--casino-gold);
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            display: inline-block;
+            margin: 0.5rem 0;
+        }
+
+        .game-animation-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            flex-direction: column;
+            padding-top: 100px;
+        }
+
+        .dice-container {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 2rem;
+            position: relative;
+            z-index: 1001;
+        }
+
+        .player-dice-group {
+            display: flex;
+            gap: 1rem;
+            position: relative;
+        }
+
+        .player-dice-group::after {
+            content: attr(data-player);
+            position: absolute;
+            bottom: -2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            color: var(--casino-gold);
+            font-size: 1.2rem;
+            white-space: nowrap;
+        }
+
+        .dice {
+            width: 80px;
+            height: 80px;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.3s ease;
+        }
+
+        .dice.rolling {
+            animation: roll 1s ease infinite;
+        }
+
+        .dice.rolling .dice-face {
+            transition: none;
+        }
+
+        .dice:not(.rolling) .dice-face {
+            transition: transform 0.3s ease;
+        }
+
+        .dice-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: var(--casino-gold);
+            border: 2px solid var(--casino-red);
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2rem;
+            backface-visibility: hidden;
+            padding: 10px;
+        }
+
+        .chess-piece {
+            width: 100%;
+            height: 100%;
+            fill: var(--casino-gold);
+            filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.5));
+        }
+
+        .number-dice {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--casino-red);
+            text-shadow: 0 0 10px rgba(139, 0, 0, 0.5);
+        }
+
+        .dice-face[data-face="1"] { transform: rotateY(0deg) translateZ(40px); }
+        .dice-face[data-face="2"] { transform: rotateY(90deg) translateZ(40px); }
+        .dice-face[data-face="3"] { transform: rotateY(180deg) translateZ(40px); }
+        .dice-face[data-face="4"] { transform: rotateY(-90deg) translateZ(40px); }
+        .dice-face[data-face="5"] { transform: rotateX(90deg) translateZ(40px); }
+        .dice-face[data-face="6"] { transform: rotateX(-90deg) translateZ(40px); }
+
+        @keyframes roll {
+            0% { transform: rotateY(0deg) rotateX(0deg); }
+            16.6% { transform: rotateY(90deg) rotateX(0deg); }
+            33.3% { transform: rotateY(180deg) rotateX(0deg); }
+            50% { transform: rotateY(270deg) rotateX(0deg); }
+            66.6% { transform: rotateY(0deg) rotateX(90deg); }
+            83.3% { transform: rotateY(0deg) rotateX(-90deg); }
+            100% { transform: rotateY(0deg) rotateX(0deg); }
+        }
+
+        .game-result-text {
+            color: var(--casino-gold);
+            font-size: 2rem;
+            text-align: center;
+            margin-top: 3rem;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+
+        .game-details {
+            color: var(--casino-gold);
+            font-size: 1.2rem;
+            text-align: center;
+            margin-top: 1rem;
+            opacity: 0.8;
+        }
+
+        .player-stake {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            color: var(--casino-gold);
+            font-weight: bold;
+            margin-top: 0.5rem;
+            padding: 0.5rem;
+            background: rgba(255, 215, 0, 0.1);
+            border-radius: 5px;
+        }
+
+        .game-stake {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--casino-gold);
+            font-weight: bold;
+            padding: 0.8rem;
+            background: rgba(255, 215, 0, 0.15);
+            border-radius: 5px;
+            margin-top: 1rem;
+        }
+
+        .game-stake.won {
+            background: rgba(0, 255, 0, 0.15);
+            color: #00ff00;
+        }
+
+        .game-stake.lost {
+            background: rgba(255, 0, 0, 0.15);
+            color: #ff0000;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .leaderboard {
+            max-height: 600px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .leaderboard::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .leaderboard::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        .leaderboard::-webkit-scrollbar-thumb {
+            background: var(--casino-gold);
+            border-radius: 4px;
+        }
+
+        .leaderboard::-webkit-scrollbar-thumb:hover {
+            background: #FFC800;
+        }
+
+        .leaderboard-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            margin: 0.5rem 0;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .leaderboard-item.vip {
+            background: rgba(255, 215, 0, 0.1);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+        }
+
+        .leaderboard-item:hover {
+            transform: translateX(5px);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .leaderboard-rank {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--casino-gold);
+            min-width: 30px;
+        }
+
+        .leaderboard-rank.top-1 {
+            color: #FFE5B4;
+            text-shadow: 0 0 10px rgba(255, 229, 180, 0.5);
+        }
+
+        .leaderboard-rank.top-2 {
+            color: #C0C0C0;
+        }
+
+        .leaderboard-rank.top-3 {
+            color: #CD7F32;
+        }
+
+        .leaderboard-user {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+
+        .leaderboard-wallet {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .leaderboard-balance {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--casino-gold);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .leaderboard-balance i {
+            color: var(--casino-gold);
+        }
+
+        .leaderboard-loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--casino-gold);
+        }
+
+        .vip-crown {
+            color: #FFD700;
+            margin-left: 0.5rem;
+            font-size: 1.1rem;
+            filter: drop-shadow(0 0 3px rgba(255, 215, 0, 0.5));
+        }
+
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+
+        .toast {
+            background: rgba(26, 26, 26, 0.95);
+            border: 2px solid var(--casino-gold);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 10px;
+            min-width: 300px;
+            max-width: 400px;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transform: translateX(120%);
+            transition: transform 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast.success {
+            border-color: #00ff00;
+        }
+
+        .toast.error {
+            border-color: #ff0000;
+        }
+
+        .toast.warning {
+            border-color: #ffd700;
+        }
+
+        .toast-icon {
+            font-size: 1.5rem;
+        }
+
+        .toast.success .toast-icon {
+            color: #00ff00;
+        }
+
+        .toast.error .toast-icon {
+            color: #ff0000;
+        }
+
+        .toast.warning .toast-icon {
+            color: #ffd700;
+        }
+
+        .toast-content {
+            flex: 1;
+        }
+
+        .toast-title {
+            font-weight: bold;
+            margin-bottom: 0.25rem;
+        }
+
+        .toast-message {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .toast-close {
+            color: rgba(255, 255, 255, 0.5);
+            cursor: pointer;
+            padding: 0.25rem;
+            transition: color 0.2s ease;
+            font-size: 1.4rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            line-height: 1;
+            text-align: center;
+            vertical-align: middle;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .toast-close:hover {
+            color: white;
+        }
+
+        .toast-close i {
+            display: inline-block;
+            width: 1em;
+            height: 1em;
+            vertical-align: -0.125em;
+        }
+
+        .btn-vip {
+            background: var(--casino-gold);
+            color: var(--casino-black);
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 5px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-vip i {
+            color: var(--casino-black);
+        }
+
+        .btn-vip:hover {
+            background: #FFC800;
+            transform: scale(1.05);
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+</head>
+<body>
+    <div id="particles-js"></div>
+    
+    <div class="game-animation-overlay" id="gameAnimation">
+        <div class="dice-container">
+            <div class="player-dice-group" data-player="Your Dice">
+                <div class="dice" id="player1ChessDice">
+                    <div class="dice-face" data-face="1">
+                        <img src="/static/king.svg" class="chess-piece" alt="King">
+                    </div>
+                    <div class="dice-face" data-face="2">
+                        <img src="/static/queen.svg" class="chess-piece" alt="Queen">
+                    </div>
+                    <div class="dice-face" data-face="3">
+                        <img src="/static/rook.svg" class="chess-piece" alt="Rook">
+                    </div>
+                    <div class="dice-face" data-face="4">
+                        <img src="/static/bishop.svg" class="chess-piece" alt="Bishop">
+                    </div>
+                    <div class="dice-face" data-face="5">
+                        <img src="/static/knight.svg" class="chess-piece" alt="Knight">
+                    </div>
+                    <div class="dice-face" data-face="6">
+                        <img src="/static/pawn.svg" class="chess-piece" alt="Pawn">
+                    </div>
+                </div>
+                <div class="dice" id="player1NumberDice">
+                    <div class="dice-face" data-face="1"><span class="number-dice">1</span></div>
+                    <div class="dice-face" data-face="2"><span class="number-dice">2</span></div>
+                    <div class="dice-face" data-face="3"><span class="number-dice">3</span></div>
+                    <div class="dice-face" data-face="4"><span class="number-dice">4</span></div>
+                    <div class="dice-face" data-face="5"><span class="number-dice">5</span></div>
+                    <div class="dice-face" data-face="6"><span class="number-dice">6</span></div>
+                </div>
+            </div>
+            <div class="player-dice-group" data-player="Opponent's Dice">
+                <div class="dice" id="player2ChessDice">
+                    <div class="dice-face" data-face="1">
+                        <img src="/static/king.svg" class="chess-piece" alt="King">
+                    </div>
+                    <div class="dice-face" data-face="2">
+                        <img src="/static/queen.svg" class="chess-piece" alt="Queen">
+                    </div>
+                    <div class="dice-face" data-face="3">
+                        <img src="/static/rook.svg" class="chess-piece" alt="Rook">
+                    </div>
+                    <div class="dice-face" data-face="4">
+                        <img src="/static/bishop.svg" class="chess-piece" alt="Bishop">
+                    </div>
+                    <div class="dice-face" data-face="5">
+                        <img src="/static/knight.svg" class="chess-piece" alt="Knight">
+                    </div>
+                    <div class="dice-face" data-face="6">
+                        <img src="/static/pawn.svg" class="chess-piece" alt="Pawn">
+                    </div>
+                </div>
+                <div class="dice" id="player2NumberDice">
+                    <div class="dice-face" data-face="1"><span class="number-dice">1</span></div>
+                    <div class="dice-face" data-face="2"><span class="number-dice">2</span></div>
+                    <div class="dice-face" data-face="3"><span class="number-dice">3</span></div>
+                    <div class="dice-face" data-face="4"><span class="number-dice">4</span></div>
+                    <div class="dice-face" data-face="5"><span class="number-dice">5</span></div>
+                    <div class="dice-face" data-face="6"><span class="number-dice">6</span></div>
+                </div>
+            </div>
+        </div>
+        <div class="game-result-text" id="gameResultText"></div>
+        <div class="game-details" id="gameDetails"></div>
+    </div>
+
+    <div class="casino-header">
+        <div class="container">
+            <div class="header-content">
+                <h1 class="casino-title">
+                    <i class="fas fa-dice section-icon"></i>
+                    Burmalda Casino
+                </h1>
+                <button class="btn-vip" onclick="checkVipStatus()">
+                    <i class="fas fa-crown"></i>
+                    VIP Room
+                </button>
+                <div class="wallet-section">
+                    <div id="ton-connect"></div>
+                    <div class="balance-display">
+                        <i class="fas fa-coins balance-icon"></i>
+                        Balance: <span id="balance">0</span> TON
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-8">
+                <div class="game-card">
+                    <h3 class="section-title">
+                        <i class="fas fa-gamepad section-icon"></i>
+                        Active Games
+                    </h3>
+                    <div id="active-games"></div>
+                    <div class="mt-3">
+                        <input type="number" class="stake-input" id="stake-amount" placeholder="Enter stake amount in TON" min="0" step="0.1">
+                        <button class="btn btn-casino" id="create-game">Test Your Luck!</button>
+                    </div>
+                </div>
+
+                <div class="game-card mt-4">
+                    <h3 class="section-title">
+                        <i class="fas fa-history section-icon"></i>
+                        Game History
+                    </h3>
+                    <div class="game-history" id="game-history"></div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="game-card">
+                    <h3 class="section-title">
+                        <i class="fas fa-trophy section-icon"></i>
+                        Leaderboard
+                    </h3>
+                    <div id="leaderboard" class="leaderboard">
+                        <div class="leaderboard-loading">Loading leaderboard...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+            manifestUrl: 'https://burmalda.task.sasc.tf/tonconnect-manifest.json',
+            buttonRootId: 'ton-connect'
+        });
+
+        tonConnectUI.setConnectRequestParameters({
+            state: 'loading'
+        });
+
+        document.getElementById('ton-connect').addEventListener('click', e => {
+            fetch('/api/users/wallet_auth').then(r => {
+                r.json().then(data => {
+                    tonConnectUI.setConnectRequestParameters({
+                        state: "ready",
+                        value: { tonProof: data.data.nonce }
+                    });
+                })
+            })
+        });
+
+        let currentUserId = null;
+        let currentUserData = null;
+        let previousActiveSessions = new Set();
+        let lastGameHistory = new Map();
+        let isDataLoading = false;
+
+        async function loadAllData() {
+            if (isDataLoading) return;
+            isDataLoading = true;
+
+            try {
+                const meResponse = await fetch('/api/users/me', {
+                    credentials: 'include'
+                });
+                
+                if (!meResponse.ok) {
+                    throw new Error('Not authenticated');
+                }
+
+                const meData = await meResponse.json();
+                if (meData.status !== 'authenticated') {
+                    document.getElementById('balance').textContent = '0.00';
+                    currentUserId = null;
+                    currentUserData = null;
+                    document.getElementById('active-games').innerHTML = '<p>Please connect your wallet to play</p>';
+                    document.getElementById('game-history').innerHTML = '<p>Please connect your wallet to view history</p>';
+                    document.getElementById('leaderboard').innerHTML = '<div class="leaderboard-loading">Please connect your wallet to view leaderboard</div>';
+                    return;
+                }
+
+                const balance = parseFloat(meData.user.balance);
+                document.getElementById('balance').textContent = balance.toFixed(2);
+                currentUserId = meData.user.id;
+                currentUserData = meData.user;
+
+                const [activeSessionsResponse, gameHistoryResponse, leaderboardResponse] = await Promise.all([
+                    fetch('/api/game/active-sessions'),
+                    fetch('/api/game/history'),
+                    fetch('/api/users/leaderboard')
+                ]);
+
+                if (activeSessionsResponse.ok) {
+                    const activeData = await activeSessionsResponse.json();
+                    const activeGames = document.getElementById('active-games');
+                    
+                    const currentActiveSessions = new Set(activeData.active_sessions?.map(game => game.id) || []);
+                    const completedGames = Array.from(previousActiveSessions).filter(id => !currentActiveSessions.has(id));
+                    
+                    if (completedGames.length > 0) {
+                        const historyData = await gameHistoryResponse.json();
+                        historyData.game_history.forEach(game => {
+                            lastGameHistory.set(game.id, game);
+                        });
+
+                        completedGames.forEach(gameId => {
+                            const completedGame = historyData.game_history.find(game => 
+                                game.id === gameId && game.winner_id
+                            );
+                            
+                            if (completedGame) {
+                                showGameAnimation(
+                                    completedGame.player1_suit,
+                                    completedGame.player2_suit,
+                                    completedGame.player1_value,
+                                    completedGame.player2_value,
+                                    completedGame.winner_id,
+                                    completedGame.player1_wallet_address,
+                                    completedGame.player2_wallet_address
+                                );
+                            } else {
+                                const lastKnownGame = lastGameHistory.get(gameId);
+                                if (lastKnownGame && lastKnownGame.winner_id) {
+                                    showGameAnimation(
+                                        lastKnownGame.player1_suit,
+                                        lastKnownGame.player2_suit,
+                                        lastKnownGame.player1_value,
+                                        lastKnownGame.player2_value,
+                                        lastKnownGame.winner_id,
+                                        lastKnownGame.player1_wallet_address,
+                                        lastKnownGame.player2_wallet_address
+                                    );
+                                }
+                            }
+                        });
+                    }
+
+                    previousActiveSessions = currentActiveSessions;
+
+                    if (activeData && activeData.active_sessions && activeData.active_sessions.length > 0) {
+                        activeGames.innerHTML = activeData.active_sessions.map(game => `
+                            <div class="game-card">
+                                <h4>Game #${game.id}</h4>
+                                <div class="stake-badge">
+                                    <i class="fas fa-coins stake-icon"></i>
+                                    Your Stake: ${game.player1_stake} TON
+                                </div>
+                                <div class="waiting-badge">
+                                    <i class="fas fa-clock stake-icon"></i>
+                                    Waiting for opponent...
+                                </div>
+                                <p>Created: ${new Date(game.created_at).toLocaleString()}</p>
+                            </div>
+                        `).join('');
+                    } else {
+                        activeGames.innerHTML = '<p>No active games found</p>';
+                    }
+                }
+
+                if (gameHistoryResponse.ok) {
+                    const historyData = await gameHistoryResponse.json();
+                    const gameHistory = document.getElementById('game-history');
+                    
+                    historyData.game_history.forEach(game => {
+                        lastGameHistory.set(game.id, game);
+                    });
+
+                    if (historyData && historyData.game_history && historyData.game_history.length > 0) {
+                        gameHistory.innerHTML = historyData.game_history.map(game => {
+                            const isPlayer1 = game.player1_id === currentUserId;
+                            const isPlayer2 = game.player2_id === currentUserId;
+                            const isWinner = game.winner_id === currentUserId;
+                            
+                            let cardClass = '';
+                            if (game.winner_id) {
+                                cardClass = isWinner ? 'won' : 'lost';
+                            }
+
+                            const player1Wallet = formatWalletAddress(game.player1_wallet_address);
+                            const player2Wallet = formatWalletAddress(game.player2_wallet_address);
+                            
+                            return `
+                            <div class="history-item ${cardClass}">
+                                <div class="game-header">
+                                    <div class="game-number">Game #${game.id}</div>
+                                    <div class="game-time">
+                                        <i class="fas fa-clock stake-icon"></i>
+                                        ${new Date(game.created_at).toLocaleString()}
+                                    </div>
+                                </div>
+                                <div class="game-content">
+                                    <div class="player-side ${game.winner_id === game.player1_id ? 'winner' : game.winner_id ? 'loser' : ''}">
+                                        <div class="player-value">
+                                            <img src="/static/${getChessPieceSVG(game.player1_suit)}" class="chess-piece" alt="${game.player1_suit}">
+                                            ${game.player1_value}
+                                        </div>
+                                        <div class="player-label ${isPlayer1 ? 'current-user' : 'opponent'}">
+                                            ${isPlayer1 ? 'You' : player1Wallet}
+                                        </div>
+                                        <div class="player-stake">
+                                            <i class="fas fa-coins stake-icon"></i>
+                                            ${game.player1_stake} TON
+                                        </div>
+                                    </div>
+                                    <div class="vs-divider">
+                                        <div class="vs-line"></div>
+                                        VS
+                                        <div class="vs-line"></div>
+                                    </div>
+                                    <div class="player-side ${game.winner_id === game.player2_id ? 'winner' : game.winner_id ? 'loser' : ''}">
+                                        <div class="player-value">
+                                            <img src="/static/${getChessPieceSVG(game.player2_suit)}" class="chess-piece" alt="${game.player2_suit}">
+                                            ${game.player2_value}
+                                        </div>
+                                        <div class="player-label ${isPlayer2 ? 'current-user' : 'opponent'}">
+                                            ${isPlayer2 ? 'You' : player2Wallet}
+                                        </div>
+                                        <div class="player-stake">
+                                            <i class="fas fa-coins stake-icon"></i>
+                                            ${game.player2_stake} TON
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `}).join('');
+                    } else {
+                        gameHistory.innerHTML = '<p>No game history found</p>';
+                    }
+                }
+
+                if (leaderboardResponse.ok) {
+                    const leaderboardData = await leaderboardResponse.json();
+                    const leaderboard = document.getElementById('leaderboard');
+                    
+                    if (leaderboardData && leaderboardData.data && leaderboardData.data.length > 0) {
+                        leaderboard.innerHTML = leaderboardData.data.map((user, index) => {
+                            const rankClass = index < 3 ? `top-${index + 1}` : '';
+                            const isVip = user.is_vip === true;
+                            return `
+                                <div class="leaderboard-item ${isVip ? 'vip' : ''}">
+                                    <div class="leaderboard-rank ${rankClass}">#${index + 1}</div>
+                                    <div class="leaderboard-user">
+                                        <div class="leaderboard-wallet">
+                                            ${formatWalletAddress(user.wallet_address)}
+                                            ${isVip ? '<i class="fas fa-crown vip-crown"></i>' : ''}
+                                        </div>
+                                        <div class="leaderboard-balance">
+                                            <i class="fas fa-coins"></i>
+                                            ${parseFloat(user.balance).toFixed(2)} TON
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+                    } else {
+                        leaderboard.innerHTML = '<div class="leaderboard-loading">No leaderboard data available</div>';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading data:', error);
+            } finally {
+                isDataLoading = false;
+            }
+        }
+
+        setInterval(loadAllData, 5000);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadAllData();
+        });
+
+        document.getElementById('create-game').addEventListener('click', async () => {
+            try {
+                const meResponse = await fetch('/api/users/me', {
+                    credentials: 'include'
+                });
+                
+                if (!meResponse.ok) {
+                    throw new Error('Not authenticated');
+                }
+
+                const meData = await meResponse.json();
+                if (meData.status !== 'authenticated') {
+                    showToast('Please connect your wallet first!', 'warning', 'Wallet Required');
+                    return;
+                }
+
+                if (meData.user.is_vip) {
+                    showToast('With great power comes great responsibility!', 'warning', 'First rule of VIP members');
+                    return;
+                }
+
+                const stakeAmount = parseFloat(document.getElementById('stake-amount').value);
+                const currentBalance = parseFloat(meData.user.balance);
+
+                if (!stakeAmount || stakeAmount <= 0) {
+                    showToast('Please enter a valid stake amount!', 'error', 'Invalid Stake');
+                    return;
+                }
+
+                if (stakeAmount > currentBalance) {
+                    showToast('Stake amount cannot be greater than your current balance!', 'error', 'Insufficient Balance');
+                    return;
+                }
+
+                const gameResponse = await fetch('/api/game/session', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ stake_amount: stakeAmount })
+                });
+
+                const gameData = await gameResponse.json();
+                if (gameData.status === 'waiting_for_opponent') {
+                    showToast('Game created! Waiting for opponent...', 'success', 'Game Created');
+                } else if (gameData.status === 'game_completed') {
+                    showGameAnimation(
+                        gameData.player1_suit,
+                        gameData.player2_suit,
+                        gameData.player1_value,
+                        gameData.player2_value,
+                        gameData.winner_id,
+                        gameData.player1_wallet_address,
+                        gameData.player2_wallet_address
+                    );
+                }
+                loadAllData();
+            } catch (error) {
+                showToast('Error creating game. Please try again.', 'error', 'Error');
+            }
+        });
+
+        function showToast(message, type = 'info', title = '') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            const icon = type === 'success' ? 'check-circle' : 
+                        type === 'error' ? 'times-circle' : 
+                        type === 'warning' ? 'exclamation-circle' : 'info-circle';
+            
+            toast.innerHTML = `
+                <i class="fas fa-${icon} toast-icon"></i>
+                <div class="toast-content">
+                    ${title ? `<div class="toast-title">${title}</div>` : ''}
+                    <div class="toast-message">${message}</div>
+                </div>
+                <button class="toast-close" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => toast.classList.add('show'), 10);
+            
+            const closeBtn = toast.querySelector('.toast-close');
+            closeBtn.addEventListener('click', () => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            });
+            
+            setTimeout(() => {
+                if (toast.parentElement) {
+                    toast.classList.remove('show');
+                    setTimeout(() => toast.remove(), 300);
+                }
+            }, 5000);
+        }
+
+        function getChessPieceSVG(piece) {
+            const pieceMap = {
+                'KING': 'king.svg',
+                'QUEEN': 'queen.svg',
+                'ROOK': 'rook.svg',
+                'BISHOP': 'bishop.svg',
+                'KNIGHT': 'knight.svg',
+                'PAWN': 'pawn.svg'
+            };
+            return pieceMap[piece] || 'king.svg';
+        }
+
+        function showGameAnimation(player1Suit, player2Suit, player1Value, player2Value, winnerId, player1Wallet, player2Wallet) {
+            const overlay = document.getElementById('gameAnimation');
+            const player1ChessDice = document.getElementById('player1ChessDice');
+            const player1NumberDice = document.getElementById('player1NumberDice');
+            const player2ChessDice = document.getElementById('player2ChessDice');
+            const player2NumberDice = document.getElementById('player2NumberDice');
+            const resultText = document.getElementById('gameResultText');
+            const gameDetails = document.getElementById('gameDetails');
+
+            player1ChessDice.classList.remove('rolling');
+            player1NumberDice.classList.remove('rolling');
+            player2ChessDice.classList.remove('rolling');
+            player2NumberDice.classList.remove('rolling');
+            player1NumberDice.style.transform = '';
+            player2NumberDice.style.transform = '';
+            resultText.textContent = '';
+            gameDetails.textContent = '';
+
+            const player1WalletFormatted = player1Wallet ? formatWalletAddress(player1Wallet) : 'Unknown';
+            const player2WalletFormatted = player2Wallet ? formatWalletAddress(player2Wallet) : 'Unknown';
+
+            document.querySelector('.player-dice-group[data-player="Your Dice"]').setAttribute('data-player', player1WalletFormatted);
+            document.querySelector('.player-dice-group[data-player="Opponent\'s Dice"]').setAttribute('data-player', player2WalletFormatted);
+
+            const playingSound = new Audio('/static/playing.mp3');
+            const winSound = new Audio('/static/win.mp3');
+            const loseSound = new Audio('/static/lose.mp3');
+
+            const safePlaySound = (sound) => {
+                try {
+                    sound.play().catch(() => {
+                        console.log('Sound playback was prevented by browser policy');
+                    });
+                } catch (error) {
+                    console.log('Error playing sound:', error);
+                }
+            };
+
+            const pieceMap = {
+                'KING': 'king.svg',
+                'QUEEN': 'queen.svg',
+                'ROOK': 'rook.svg',
+                'BISHOP': 'bishop.svg',
+                'KNIGHT': 'knight.svg',
+                'PAWN': 'pawn.svg'
+            };
+
+            const player1ChessSVG = pieceMap[player1Suit] || 'king.svg';
+            const player2ChessSVG = pieceMap[player2Suit] || 'king.svg';
+
+            const chessPieces = ['king.svg', 'queen.svg', 'rook.svg', 'bishop.svg', 'knight.svg', 'pawn.svg'];
+            player1ChessDice.querySelectorAll('.chess-piece').forEach((img, index) => {
+                img.src = `/static/${chessPieces[index]}`;
+            });
+            player2ChessDice.querySelectorAll('.chess-piece').forEach((img, index) => {
+                img.src = `/static/${chessPieces[index]}`;
+            });
+
+            overlay.style.display = 'flex';
+            overlay.style.cursor = 'default';
+
+            player1ChessDice.classList.add('rolling');
+            player1NumberDice.classList.add('rolling');
+            player2ChessDice.classList.add('rolling');
+            player2NumberDice.classList.add('rolling');
+
+            safePlaySound(playingSound);
+
+            const animationTimeout = setTimeout(() => {
+                endAnimation();
+            }, 3000);
+
+            function endAnimation() {
+                clearTimeout(animationTimeout);
+                player1ChessDice.classList.remove('rolling');
+                player1NumberDice.classList.remove('rolling');
+                player2ChessDice.classList.remove('rolling');
+                player2NumberDice.classList.remove('rolling');
+
+                player1ChessDice.querySelectorAll('.chess-piece').forEach(img => {
+                    img.src = `/static/${player1ChessSVG}`;
+                });
+                player2ChessDice.querySelectorAll('.chess-piece').forEach(img => {
+                    img.src = `/static/${player2ChessSVG}`;
+                });
+
+                const getRotationForValue = (value) => {
+                    const numValue = parseInt(value);
+                    if (isNaN(numValue) || numValue < 1 || numValue > 6) {
+                        return 'rotateY(0deg)';
+                    }
+
+                    const rotations = {
+                        1: 'rotateY(0deg)',
+                        2: 'rotateY(-90deg)',
+                        3: 'rotateY(180deg)',
+                        4: 'rotateY(90deg)',
+                        5: 'rotateX(-90deg)',
+                        6: 'rotateX(90deg)'
+                    };
+
+                    return rotations[numValue];
+                };
+
+                requestAnimationFrame(() => {
+                    const player1Rotation = getRotationForValue(player1Value);
+                    const player2Rotation = getRotationForValue(player2Value);
+
+                    player1NumberDice.querySelectorAll('.number-dice').forEach((face, index) => {
+                        face.textContent = (index + 1).toString();
+                    });
+                    player2NumberDice.querySelectorAll('.number-dice').forEach((face, index) => {
+                        face.textContent = (index + 1).toString();
+                    });
+
+                    player1NumberDice.style.transform = player1Rotation;
+                    player2NumberDice.style.transform = player2Rotation;
+                });
+
+                const isWinner = winnerId === currentUserId;
+                resultText.textContent = isWinner ? 'You Won!' : 'You Lost!';
+                gameDetails.textContent = `${player1Suit}${player1Value} vs ${player2Suit}${player2Value} (${player1WalletFormatted} vs ${player2WalletFormatted})`;
+
+                if (isWinner) {
+                    safePlaySound(winSound);
+                } else {
+                    safePlaySound(loseSound);
+                }
+
+                overlay.style.cursor = 'pointer';
+                overlay.onclick = function() {
+                    overlay.style.display = 'none';
+                    player1NumberDice.style.transform = '';
+                    player2NumberDice.style.transform = '';
+                    resultText.textContent = '';
+                    gameDetails.textContent = '';
+                    overlay.onclick = null;
+                    playingSound.pause();
+                    playingSound.currentTime = 0;
+                    winSound.pause();
+                    winSound.currentTime = 0;
+                    loseSound.pause();
+                    loseSound.currentTime = 0;
+                    document.querySelector('.player-dice-group[data-player="' + player1WalletFormatted + '"]').setAttribute('data-player', 'Your Dice');
+                    document.querySelector('.player-dice-group[data-player="' + player2WalletFormatted + '"]').setAttribute('data-player', 'Opponent\'s Dice');
+                };
+            }
+
+            playingSound.onended = endAnimation;
+        }
+
+        function formatWalletAddress(address) {
+            if (!address || typeof address !== 'string' || address.length < 8) return 'Unknown';
+            return `${address.slice(0, 4)}...${address.slice(-4)}`;
+        }
+
+        async function checkVipStatus() {
+            fetch('/api/users/me', {
+                credentials: 'include'
+            }).then(r => {
+                if (!r.ok) {
+                    throw new Error('Not authenticated');
+                }
+                return r.json();
+            }).then(data => {
+                if (data.status !== 'authenticated') {
+                    Toastify({
+                        text: "Please connect your wallet first!",
+                        duration: 3000,
+                        gravity: "top",
+                        position: "right",
+                        backgroundColor: "var(--casino-red)",
+                        stopOnFocus: true
+                    }).showToast();
+                    return;
+                }
+                
+                if (data.user.is_vip) {
+                    window.location.href = '/vip';
+                } else {
+                    Toastify({
+                        text: "You need VIP status to access the VIP room!",
+                        duration: 3000,
+                        gravity: "top",
+                        position: "right",
+                        backgroundColor: "var(--casino-red)",
+                        stopOnFocus: true
+                    }).showToast();
+                }
+            }).catch(error => {
+                Toastify({
+                    text: "Please connect your wallet first!",
+                    duration: 3000,
+                    gravity: "top",
+                    position: "right",
+                    backgroundColor: "var(--casino-red)",
+                    stopOnFocus: true
+                }).showToast();
+            });
+        }
+    </script>
+</body>
+</html> 

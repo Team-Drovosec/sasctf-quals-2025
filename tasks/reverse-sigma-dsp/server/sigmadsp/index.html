@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Sigma Acoustic Calibrator</title>
+    <style>
+        /* ---- imports & root palette ---- */
+        @import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
+
+        :root {
+            --bg: #0d0d0d;
+            --fg: #f8f8f2;
+            --accent: #00d1b2;
+            --accent-soft: #00b89c;
+            --accent2: #ff3860;
+        }
+
+        /* ---- global reset ---- */
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            font-family: "Press Start 2P", monospace;
+            background: var(--bg);
+            color: var(--fg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        /* ---- layout ---- */
+        .wrapper {
+            padding: 2rem;
+            max-width: 640px;
+        }
+
+        /* headline */
+        h1 {
+            margin: 0 0 1rem;
+            font-size: 2rem;
+            color: var(--accent);
+        }
+
+        h2 {
+            margin: 0 0 2rem;
+            font-size: 1rem;
+            color: var(--accent2);
+        }
+
+        /* σ orb animation */
+        .orb {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 2rem;
+            border: 6px dashed var(--accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: pulse 2s linear infinite;
+        }
+        .orb span {
+            font-size: 2rem;
+            color: var(--accent);
+        }
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.12);
+                opacity: 0.6;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* button */
+        button {
+            font-family: inherit;
+            font-size: 1rem;
+            padding: 1rem 2.5rem;
+            background: var(--accent);
+            border: none;
+            border-radius: 8px;
+            color: var(--bg);
+            cursor: pointer;
+            box-shadow: 0 0 12px var(--accent);
+            transition: transform 0.1s ease, background 0.2s;
+        }
+        button:hover {
+            background: var(--accent-soft);
+        }
+        button:active {
+            transform: scale(0.96);
+        }
+        button[disabled] {
+            opacity: 0.35;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+
+        /* cosmetic disabled slider */
+        .slider-shell {
+            margin: 2rem auto;
+            width: 60%;
+            max-width: 320px;
+        }
+
+        /* tinyprint */
+        footer {
+            margin-top: 2rem;
+            font-size: 0.6rem;
+            opacity: 0.6;
+        }
+        a {
+            color: var(--accent2);
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper" role="main">
+        <div class="orb" aria-hidden="true"><span>&sigma;</span></div>
+        <h1>Sigma Acoustic Calibrator</h1>
+        <h2>ISO‑1337 Certified • v1.0‑β</h2>
+
+        <button id="button-dsp">Start</button>
+
+        <p>
+            Press <strong>once</strong>, let the protocol run, and jot down anything richly
+            informative you might encounter.
+        </p>
+
+        <footer>
+            <p>
+                All rights reversed.
+        </footer>
+    </div>
+    <script type="module" src="/src/index.js"></script>
+</body>
+</html>

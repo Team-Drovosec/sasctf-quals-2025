@@ -1,0 +1,19 @@
+.post-view-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: var(--spacing-lg);
+  background-color: var(--bg-primary);
+  min-height: 100vh;
+}
+
+.post-view-header {
+  margin-bottom: var(--spacing-lg);
+}
+
+.post-view-content {
+  background-color: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  border: 2px solid var(--border-primary);
+}

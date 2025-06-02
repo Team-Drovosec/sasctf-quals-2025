@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "cave-digging-gen"
+version = "0.1.0"
+description = ""
+authors = ["Maxim <me@alzhanov.ru>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.13"
+amulet-core = "^1.9.29"
+networkx = "^3.4.2"
+matplotlib = "^3.10.3"
+ipympl = "^0.9.7"
+tqdm = "^4.67.1"
+scipy = "^1.15.3"
+
+
+[tool.poetry.group.dev.dependencies]
+ipykernel = "^6.29.5"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

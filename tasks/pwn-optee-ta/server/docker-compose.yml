@@ -1,0 +1,19 @@
+version: "3.8"
+
+services:
+  trust-issues:
+    build: .
+    ports:
+      - 45454:45454
+    read_only: true
+    tmpfs:
+      - /tmp
+    restart: on-failure
+    deploy:
+      resources:
+        limits:
+          cpus: 15
+          memory: 15G
+        reservations:
+          cpus: 10
+          memory: 64M
