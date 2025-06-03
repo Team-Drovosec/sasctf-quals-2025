@@ -39,7 +39,7 @@ Content-Type: text/plain
 
 Browser will silently check that the specified endpoint supports HTTPS and also will send an OPTIONS request expecting certain headers in response. There will be no explicit errors if you're not passing the check.
 
-Bot in this service has `acceptInsecureCerts` feature enabled, so you will there's no prerequisite to own a domain to solve it. If you have a webhook that can be configured to respond after OPTIONS - nice. For everyone else the simpliest solution might be using nginx with selfsigned certificate on a VPS.
+Bot in this service has `acceptInsecureCerts` feature enabled, so there's no prerequisite to own a domain to solve it. If you have a webhook that can be configured to respond after OPTIONS - nice. For everyone else the simpliest solution might be using nginx with selfsigned certificate on a VPS.
 
 Example nginx config:
 ```
