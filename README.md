@@ -40,9 +40,9 @@ https://ctftime.org/event/2636
 |[A Mule Stealer](tasks/mlw-mule-stealer/)|malware|[@gkucherin](https://github.com/gkucherin)|
 |[Best Teams Forever](tasks/mlw-teams/)|malware|[@gkucherin](https://github.com/gkucherin)|
 |[Music Speed Changer](tasks/mlw-music-speed-changer/)|malware|[@gkucherin](https://github.com/gkucherin)|
-|[Decompression](tasks/reverse-decompression/)|reverse|[@3vilWind](https://github.com/3wilWind)|
-|[Sigma DSP](tasks/reverse-sigma-dsp/)|reverse|[@3vilWind](https://github.com/3wilWind)|
-|[Washing Machine](tasks/reverse-washing-machine/)|reverse|[@3vilWind](https://github.com/3wilWind)|
+|[Decompression](tasks/reverse-decompression/)|reverse|[@3vilWind](https://github.com/3vilWind)|
+|[Sigma DSP](tasks/reverse-sigma-dsp/)|reverse|[@3vilWind](https://github.com/3vilWind)|
+|[Washing Machine](tasks/reverse-washing-machine/)|reverse|[@3vilWind](https://github.com/3vilWind)|
 |[it Sova](tasks/web3-sova/)|reverse, web3|[@spacewasp](https://github.com/spacewasp)|
 |[posOSix I/II](tasks/reverse-pososix/)|reverse, misc|[@b1ad3runn3r](https://github.com/b1ad3runn3r) & [@kumfc](https://github.com/kumfc)|
 |[Library](tasks/minecraft-library/)|minecraft|[@irdkwmnsb](https://github.com/irdkwmnsb)|
