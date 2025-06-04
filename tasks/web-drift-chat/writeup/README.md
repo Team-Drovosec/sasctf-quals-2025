@@ -109,4 +109,4 @@ Also, we can note that the application does not check any access to the chat whe
 You can find the exploit in `exploit.sh`
 
 ## Fun fact
-The task actually has nothing to do with the race condition, it's style and description is just a gag, while inconsistency depends on the redis shard distribution.
+Actually, original task idea has nothing to do with the race condition, it's style and description is just a gag, while inconsistency depends on the redis shard distribution (thus you can perform it request by request with no automation required). But turns out there's *also* a race condition that can happen even with a single redis instance. Thanks to the participants for pointing that out.
